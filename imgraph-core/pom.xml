@@ -14,7 +14,7 @@
 	<properties>
 		<version.infinispan>5.2.0.Final</version.infinispan>
 		
-		<jzmq.version>2.2.3-SNAPSHOT</jzmq.version>
+		<jzmq.version>4-4.0.0-SNAPSHOT</jzmq.version>
 		<native.os>${os.name}</native.os>
 	</properties>
 
