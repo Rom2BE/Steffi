@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.Map.Entry;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -20,11 +21,14 @@ import org.infinispan.Cache;
 
 import com.imgraph.common.BigTextFile;
 import com.imgraph.model.Cell;
+import com.imgraph.model.CellType;
 import com.imgraph.model.EdgeType;
 import com.imgraph.model.ImgEdge;
 import com.imgraph.model.ImgGraph;
 import com.imgraph.model.ImgVertex;
 import com.imgraph.storage.CacheContainer;
+import com.imgraph.storage.CellSequence;
+import com.imgraph.storage.StorageTools;
 import com.imgraph.storage.CellTransaction.TransactionConclusion;
 import com.imgraph.traversal.DistributedTraversal;
 import com.imgraph.traversal.EdgeTraversalConf;
@@ -32,6 +36,12 @@ import com.imgraph.traversal.Evaluation;
 import com.imgraph.traversal.MatchEvaluatorConf;
 import com.imgraph.traversal.Path;
 import com.imgraph.traversal.TraversalResults;
+import com.tinkerpop.blueprints.Edge;
+import com.tinkerpop.blueprints.Vertex;
+import com.tinkerpop.blueprints.TransactionalGraph.Conclusion;
+import com.tinkerpop.blueprints.impls.imgraph.ImgraphEdge;
+import com.tinkerpop.blueprints.impls.imgraph.ImgraphGraph;
+import com.tinkerpop.blueprints.impls.imgraph.ImgraphVertex;
 
 /**
  * @author Aldemar Reynaga
@@ -135,30 +145,27 @@ public class TestTools {
 					outFile), false));
 
 			writer.write("#START_ID, END_ID");
-
-
-
+			
 			for (int i=0; i<numTests; i++) {
-
+				System.out.println("int i = " + i);
 				while (startCell == null) {
+					System.out.println("in startCell");
 					startId = nextLong(randomGen, maxId - minId) + minId;
 					startCell = cache.get(startId);
+					System.out.println("out startCell");
 				}
 				
 				while (endCell == null || startCell.getId() == endCell.getId()) {
+					System.out.println("in endCell");
 					endId = nextLong(randomGen, maxId - minId) + minId;
 					endCell = cache.get(endId);
+					System.out.println("out endCell");
 				}
 				writer.newLine();
 				writer.write(startId + "," + endId);
 				startCell = null;
 				endCell = null;
-
-
 			}
-
-
-
 		} finally {
 			if (writer != null) {
 				writer.flush();
@@ -166,8 +173,113 @@ public class TestTools {
 			}
 		}
 	}
+	
+	public static void genVertices(long minId, long maxId, long numVertices){
+		long i = 1;
+		long id, security = 0;
+		long securityLoop = minId-1;
+		Vertex v = null;
+		Random randomGen = new Random();
+		ImgraphGraph graph = ImgraphGraph.getInstance();
+		
+		while(i<numVertices+1){
+			do{
+				if(security > maxId){ //prevent infinite loop if wrong input ranges
+					securityLoop++;
+					id = securityLoop;
+				}
+				else{
+					id = TestTools.nextLong(randomGen, maxId - minId) + minId;
+					security++;
+				}
+				v = graph.getVertex(id); //check if this id is already used 
+			} while (v != null); 
+			System.out.println("ID : " + id);
+			security = 0;
+			securityLoop = minId-1;
+			graph.startTransaction();
+			graph.addVertex(id);
+			graph.stopTransaction(Conclusion.SUCCESS);
+			i++;
+		}
+	}
 
-
+	public static void genUndirectedEdges(long minId, long maxId,
+			long numEdges) {
+		maxId++;
+		ImgraphGraph graph = ImgraphGraph.getInstance();
+		long i = 0;
+		long idV1 = 0;
+		long idV2 = 0;
+		boolean edgeAlreadyExist = false;
+		boolean fullEdges = false;
+		boolean allFull = false;
+		Random randomGen = new Random();
+		graph.registerItemName("Friend");
+		
+		Cache<Long, Cell> cellCache;
+		
+		while(i<numEdges){
+			if(!allFull){
+				cellCache = CacheContainer.getCellCache();
+				//Find Start Vertex
+				do{
+					fullEdges = false;
+					allFull = true;
+					idV1 = nextLong(randomGen, maxId - minId) + minId;
+					for (Cell cell : cellCache.values()){
+						if (cell.getCellType().equals(CellType.VERTEX)){ 
+							if (((ImgVertex) cell).getEdges().size() == (maxId-minId)-1){
+								if (cell.getId() == idV1){
+									fullEdges=true;
+								}
+							}
+							else
+								allFull = false;
+						}
+					}
+					
+				}while((graph.getVertex(idV1) == null || fullEdges) && !allFull);
+				if(!allFull){
+					//Find End Vertex			
+					do{
+						fullEdges = false;
+						edgeAlreadyExist=false;
+						idV2 = nextLong(randomGen, maxId - minId) + minId;
+						for (Cell cell : cellCache.values()){
+							if (cell.getCellType().equals(CellType.VERTEX) && cell.getId()==idV1){
+								for(ImgEdge edge : ((ImgVertex) cell).getEdges()){
+									if (edge.getDestCellId()==idV2)
+										edgeAlreadyExist = true;
+								}
+							}
+						}
+					}while(graph.getVertex(idV2) == null || idV1 == idV2 || edgeAlreadyExist || fullEdges);
+					//Connect
+					graph.startTransaction();
+					graph.addUndirectedEdge("", graph.getVertex(idV1), graph.getVertex(idV2), "Friend");
+					graph.stopTransaction(Conclusion.SUCCESS);
+					System.out.println(idV1 + " & " + idV2 + " are now Friends.");
+				}
+			}
+			i++;
+		}
+		if (allFull){
+			long vertexCounter = 0;
+			long edgeCounter = 0;
+			cellCache = CacheContainer.getCellCache();
+			for (Cell cell : cellCache.values()){
+				if (cell.getCellType().equals(CellType.VERTEX)){
+					vertexCounter++;
+					for(ImgEdge edge : ((ImgVertex) cell).getEdges()){
+						edgeCounter++;
+					}
+				}
+			}
+			System.out.println("All possible edges (" + edgeCounter/2 + ") have been created for " + vertexCounter + " vertices.");
+		}
+	}
+	
 	private static void runTraversal(DistributedTraversal traversal, 
 			long startVertexId, long endVertexId, ImgGraph graph, 
 			List<Long> traversalTimes,
@@ -561,7 +673,4 @@ public class TestTools {
 		
 		
 	}
-	
-	
-	
 }

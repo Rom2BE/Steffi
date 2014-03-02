@@ -1,6 +1,7 @@
 package com.imgraph.model;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -343,7 +344,15 @@ public class ImgGraph implements Serializable {
 	
 	
 	public Iterable<Long> getCellIds() {
-		throw new UnsupportedOperationException();
+		Cache<Long, Cell> cellCache = CacheContainer.getCellCache();
+		System.out.println(cellCache.size());
+		List<Long> result = new ArrayList<Long>();
+		
+		for (Cell cell : cellCache.values()){
+			result.add(cell.getId());
+		}
+		
+		return result;
 	}
 	
 	

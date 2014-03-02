@@ -194,8 +194,6 @@ public class ImgraphGraph implements Graph, TransactionalGraph, IndexableGraph {
 
 	@Override
 	public Iterable<Vertex> getVertices() {
-		
-		
 		throw new UnsupportedOperationException();
 	}
 
@@ -235,8 +233,6 @@ public class ImgraphGraph implements Graph, TransactionalGraph, IndexableGraph {
 		rawGraph.stopTransaction(conclusion.equals(Conclusion.SUCCESS)?TransactionConclusion.COMMIT:
 			TransactionConclusion.ROLLBACK);
 	}
-	
-	
 
 	@Override
 	public <T extends Element> Index<T> createIndex(String indexName, Class<T> indexClass,

@@ -25,10 +25,6 @@ public class ImgEdge extends Cell implements Serializable {
 	protected long sourceCellId;
 	protected long destCellId;
 	protected EdgeType edgeType;
-	
-	
-	
-
 
 	protected ImgEdge( long sourceCellId, 
 			long destCellId, 

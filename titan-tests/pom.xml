@@ -29,12 +29,6 @@
    		<version>0.3.0</version>
 	</dependency>
 	
-	<dependency>
-    	<groupId>org.yaml</groupId>
-    	<artifactId>snakeyaml</artifactId>
-    	<version>1.13-SNAPSHOT</version>
-  	</dependency>
-  	
   	<dependency>
 	  <groupId>com.typesafe.akka</groupId>
 	  <artifactId>akka-actor_2.10</artifactId>
@@ -173,15 +167,5 @@
 			</plugin>
   		</plugins>
   	</build>
-  	
-  	<repositories>
-  
-	  <repository>
-	    <id>Sonatype-public</id>
-	    <name>SnakeYAML repository</name>
-	    <url>http://oss.sonatype.org/content/groups/public/</url>
-	  </repository>
-  
-	</repositories>
   
 </project>

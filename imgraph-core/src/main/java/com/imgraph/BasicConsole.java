@@ -6,8 +6,10 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Map.Entry;
 
+import org.infinispan.Cache;
 import org.infinispan.remoting.transport.jgroups.JGroupsAddress;
 import org.infinispan.remoting.transport.jgroups.JGroupsTransport;
 import org.jgroups.Channel;
@@ -22,6 +24,7 @@ import com.imgraph.index.ImgIndex;
 import com.imgraph.index.ImgIndexHits;
 import com.imgraph.loader.LoadVertexInfo;
 import com.imgraph.loader.TextFileLoader;
+import com.imgraph.model.Cell;
 import com.imgraph.model.EdgeType;
 import com.imgraph.model.ImgEdge;
 import com.imgraph.model.ImgVertex;
@@ -69,7 +72,6 @@ public class BasicConsole {
 		runConsole(true);
 	}
 	
-	
 	private static void runConsole(boolean initZMQ) throws Exception{
 		System.setProperty("java.net.preferIPv4Stack" , "true");
 		String command;
@@ -82,12 +84,12 @@ public class BasicConsole {
 			new Thread(nodeServer).start();
 		}
 			
-		
+		Thread.sleep(1000);//allows ZMQ server to be initialized before running the command
 		CacheContainer.getCacheContainer().start();
 		CacheContainer.getCellCache().start();
 		ImgraphGraph graph = ImgraphGraph.getInstance();
 		while (true) {
-			//System.out.println("Hi!!!");
+			System.out.println("\nWaiting for your command :");
 			command = IOUtils.readLine(">");
 			if (command.equals("load")) {
 				String fileName = IOUtils.readLine("Load from file: ");
@@ -264,10 +266,85 @@ public class BasicConsole {
 					v2.setProperty("name", "Juan");
 					e.setProperty("years", 15);
 					
+					graph.stopTransaction(Conclusion.SUCCESS);
 					
+				} catch (Exception ex) {
+					ex.printStackTrace();
+				}
+			} else if (command.equals("addCell")) {
+				try {
+					String vectorId  = IOUtils.readLine("Vector Id: ");
+					
+					graph.startTransaction();
+
+					graph.addVertex(Long.parseLong(vectorId));
 					
 					graph.stopTransaction(Conclusion.SUCCESS);
 					
+				} catch (Exception ex) {
+					ex.printStackTrace();
+				}
+			} else if (command.equals("myTest")) {
+				try {
+					graph.registerItemName("name");
+					graph.registerItemName("years");
+					graph.registerItemName("Friend");
+					
+					graph.startTransaction();
+					
+					Vertex v1 = graph.addVertex(1L);
+					Vertex v2 = graph.addVertex(2L);
+					Vertex v3 = graph.addVertex(3L);
+					Vertex v4 = graph.addVertex(4L);
+					
+					System.out.println(StorageTools.getCellAddress((Long) v1.getId()));
+					System.out.println(StorageTools.getCellAddress((Long) v2.getId()));
+					System.out.println(StorageTools.getCellAddress((Long) v3.getId()));
+					System.out.println(StorageTools.getCellAddress((Long) v4.getId()));
+					
+					Edge e0 = graph.addUndirectedEdge("", v1, v2, "Friend");
+					Edge e1 = graph.addUndirectedEdge("", v2, v3, "Friend");
+					Edge e2 = graph.addUndirectedEdge("", v3, v4, "Friend");
+					Edge e3 = graph.addUndirectedEdge("", v4, v1, "Friend");
+					
+					v1.setProperty("name", "Romain");
+					v2.setProperty("name", "Livie");
+					v3.setProperty("name", "Steven");
+					v4.setProperty("name", "Antoine");
+					
+					e0.setProperty("years", 12);
+					e1.setProperty("years", 23);
+					e2.setProperty("years", 34);
+					e3.setProperty("years", 41);
+					
+					graph.stopTransaction(Conclusion.SUCCESS);					
+				} catch (Exception ex) {
+					ex.printStackTrace();
+				}
+			} else if (command.equals("genVertices")) {
+				try {					
+					long numVertices = Long.parseLong(IOUtils.readLine("Number of vertices: "));
+					long minId = Long.parseLong(IOUtils.readLine("Minimum id: "));
+					long maxId = Long.parseLong(IOUtils.readLine("Maximum id: "));
+					TestTools.genVertices(minId, maxId, numVertices);
+
+					Map<String, Integer> cellCount = StorageTools.countCellsInCluster();
+					long totalCount = 0;
+					
+					for (Entry<String, Integer> entry : cellCount.entrySet()) {
+						System.out.println("Machine " + entry.getKey() + ": " + entry.getValue() + " cells");
+						totalCount += entry.getValue();
+					}	
+					System.out.println("Total Count = " + totalCount);
+				} catch (Exception ex) {
+					ex.printStackTrace();
+				}
+			} else if (command.equals("genUnEd")) { //Generate Undirected Edges
+				try {	
+					long numEdges = Long.parseLong(IOUtils.readLine("Number of edges: "));
+					long minId = Long.parseLong(IOUtils.readLine("Minimum start vertex id: "));
+					long maxId = Long.parseLong(IOUtils.readLine("Maximum end vertex id: "));
+					TestTools.genUndirectedEdges(minId, maxId, numEdges);
 				} catch (Exception ex) {
 					ex.printStackTrace();
 				}
@@ -444,7 +521,6 @@ public class BasicConsole {
 					
 				} catch (Exception x) {
 					x.printStackTrace();
-					
 				}
 				
 			} else if (command.equals("traverse")) {
@@ -577,7 +653,6 @@ public class BasicConsole {
 					}
 					System.out.println("Total number of cells: " + totalCount);	
 					
-					
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -590,10 +665,7 @@ public class BasicConsole {
 				Main.sendStopMessage(Configuration.getProperty(Configuration.Key.NODE_PORT));
 			
 				break;
-			}
-			
+			}			
 		}
-	}
-	
-	
+	}	
 }
