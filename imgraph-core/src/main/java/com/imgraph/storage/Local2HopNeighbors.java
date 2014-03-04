@@ -15,7 +15,6 @@ public class Local2HopNeighbors {
 	
 	private TLongObjectMap<ImgIndexedEdges> cellNeighbors;
 	
-	
 	private Local2HopNeighbors() {
 		cellNeighbors = new TLongObjectHashMap<ImgIndexedEdges>();
 	}
@@ -23,8 +22,6 @@ public class Local2HopNeighbors {
 	private static class SingletonHolder { 
         public static final Local2HopNeighbors instance = new Local2HopNeighbors();
 	}
-	
-	
 	
 	public static void addNeighborEdge(long cellId, ImgEdge edge) {
 		ImgIndexedEdges indexedEdges = SingletonHolder.instance.cellNeighbors.get(cellId);
@@ -53,17 +50,11 @@ public class Local2HopNeighbors {
 		}
 	}
 	
-	
 	public static void setNeighbors(long cellId, ImgIndexedEdges neighbors) {
 		synchronized (SingletonHolder.instance.cellNeighbors) {
 			SingletonHolder.instance.cellNeighbors.put(cellId, neighbors);
 		}
 	}
-	
-	
-	
-	
-	
 	
 	public static ImgIndexedEdges getNeighbors(final Long cellId) {
 		return SingletonHolder.instance.cellNeighbors.get(cellId);
@@ -72,6 +63,4 @@ public class Local2HopNeighbors {
 	public static long[] getCellIds() {
 		return SingletonHolder.instance.cellNeighbors.keys();
 	}
-	
-	
 }

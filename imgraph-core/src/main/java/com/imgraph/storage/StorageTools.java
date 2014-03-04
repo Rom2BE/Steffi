@@ -28,7 +28,6 @@ import com.imgraph.networking.messages.MessageType;
  */
 public abstract class StorageTools {
 	
-	
 	public static String getCellAddress(Long cellId) {
 		DistributionManager dm = CacheContainer.getCellCache().getAdvancedCache().getDistributionManager();
 		return dm.getPrimaryLocation(cellId).toString();
@@ -36,7 +35,6 @@ public abstract class StorageTools {
 	
 	public static void members() {
 		DistributionManager dm = CacheContainer.getCellCache().getAdvancedCache().getDistributionManager();
-		
 	}
 	
 	public static Map<String, String> getAddressesIps() {
@@ -47,8 +45,6 @@ public abstract class StorageTools {
 		
 		return result;
 	}
-	
-	
 	
 	public static String getIpAddress(Address address) {
 		String ipAddressHost = null;
@@ -98,10 +94,7 @@ public abstract class StorageTools {
 		} finally {
 			if (socket !=null)
 				socket.close();
-		}
-		
+		}		
 		return results;
 	}
-	
-	
 }

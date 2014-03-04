@@ -18,16 +18,12 @@ import com.imgraph.common.Configuration;
 public class CacheContainer {
 	private static final String CONFIG_FILE = Configuration.getProperty(Configuration.Key.CACHE_CONFIG_FILE);
 
-	
 	private static final EmbeddedCacheManager CACHE_MANAGER;
 	
 	public static final String CELL_CACHE_NAME = "___cell-storage___";
 	public static final String VERTEX_INDEX_CACHE_NAME = "___vertex-index-storage___";
 	public static final String EDGE_INDEX_CACHE_NAME = "___edge-index-storage___";
 	
-	
-	
-
 	static {
 		try {
 			CACHE_MANAGER = new DefaultCacheManager(CONFIG_FILE);
@@ -36,7 +32,6 @@ public class CacheContainer {
 			throw new RuntimeException("Unable to configure Infinispan", e);
 		}
 	}
-
 	
 	/**
 	 * Retrieves the default cache.
@@ -85,10 +80,6 @@ public class CacheContainer {
 		return cache;
 	}
 	
-	
-	
-	
-	
 	/**
 	 * Retrieves the embedded cache manager.
 	 * @return a cache manager
@@ -97,16 +88,13 @@ public class CacheContainer {
 		return CACHE_MANAGER;
 	}
 	
-	
 	public static List<String> getIndexCacheNames() {
 		List<String> names = new ArrayList<String>();
 		
 		for (String cacheName : CACHE_MANAGER.getCacheNames()) {
 			if (!cacheName.equals(CELL_CACHE_NAME))
 				names.add(cacheName);
-		}
-		
+		}	
 		return names;
-	}
-	
+	}	
 }

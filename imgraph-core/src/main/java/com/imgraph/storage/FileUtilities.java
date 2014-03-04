@@ -1,18 +1,32 @@
 package com.imgraph.storage;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.StringTokenizer;
+import java.util.Map.Entry;
+import java.awt.Desktop;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 import org.infinispan.Cache;
+import org.codehaus.jackson.JsonGenerationException;
+import org.codehaus.jackson.map.JsonMappingException;
+import org.codehaus.jackson.map.ObjectMapper;
 
 import com.imgraph.common.BigTextFile;
 import com.imgraph.model.Cell;
 import com.imgraph.model.EdgeType;
 import com.imgraph.model.ImgEdge;
 import com.imgraph.model.ImgVertex;
+import com.imgraph.testing.TestTools;
 import com.tinkerpop.blueprints.TransactionalGraph.Conclusion;
 import com.tinkerpop.blueprints.impls.imgraph.ImgraphGraph;
 import com.tinkerpop.blueprints.impls.imgraph.ImgraphVertex;
@@ -128,8 +142,6 @@ public class FileUtilities {
 							break;
 						
 						}
-						
-						
 					}
 					
 					line += (edgeInCounter + edgeIn + "\t" + edgeOutCounter + edgeOut +
@@ -141,6 +153,58 @@ public class FileUtilities {
 			}
 		} finally {
 			if (bufWriter!=null){try{bufWriter.close();}catch(IOException ioe){}}
+		}
+	}
+	
+	public static void writeD3ToFile(String fileName) throws IOException {
+		ObjectMapper objectMapper = new ObjectMapper();
+		Map<String, Object> mapObject = new HashMap<String, Object>();
+		Map<Long,Map<Long,String>> connectionsMap = TestTools.getConnections();
+		//First Loop : create all vertices using keySet()
+		Map<Long, Integer> indexMap = new HashMap<Long, Integer>();
+		List<Object> nodeList = new ArrayList<Object>();
+		int i = 0;
+		for (Long id : connectionsMap.keySet()){
+			Map<String, Object> node = new HashMap<String, Object>();
+			node.put("name", "Vertex " + id);
+			node.put("group", i%4); //TODO correct group number
+			nodeList.add(node);
+			indexMap.put(id, i);
+			i++;
+		}
+		mapObject.put("nodes", nodeList);
+		
+		//Second Loop : create all edges
+		List<Object> edgeList = new ArrayList<Object>();
+		Iterator entries = connectionsMap.entrySet().iterator();
+		while (entries.hasNext()) {
+			Entry vertex = (Entry) entries.next();
+			Long vertexId = ((Entry<Long, Map<Long,String>>) vertex).getKey();
+			Map<Long,String> edges = ((Entry<Long, Map<Long,String>>) vertex).getValue(); //Edges
+			for (Long edgeId : edges.keySet()){
+				Map<String, Object> edge = new HashMap<String, Object>();
+				edge.put("source", indexMap.get(vertexId));
+				edge.put("target", indexMap.get(edgeId));
+				edge.put("value", 1); //TODO ?
+				edgeList.add(edge);
+			}
+		}
+		mapObject.put("links", edgeList);
+		
+		try {
+			objectMapper.writeValue(new File(fileName), mapObject);
+			if(Desktop.isDesktopSupported())
+			{
+			  Desktop.getDesktop().browse(new File("../data/index.html").toURI());
+			}
+			//file:///Users/romain/Dropbox/Master/Q2/Memoire/Code/Steffi/imgraph-core/data/index.html
+
+		} catch (JsonGenerationException e) {
+			e.printStackTrace();
+		} catch (JsonMappingException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 }

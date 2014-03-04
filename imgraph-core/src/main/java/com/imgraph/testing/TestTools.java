@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.TreeMap;
 import java.util.Map.Entry;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -204,6 +205,7 @@ public class TestTools {
 		}
 	}
 	
+	
 	public static void genEdges(long minId, long maxId,
 			long numEdges, boolean directed) {
 		maxId++;
@@ -287,6 +289,30 @@ public class TestTools {
 			}
 			System.out.println("All possible edges (" + edgeCounter/2 + ") have been created for " + vertexCounter + " vertices.");
 		}
+	}
+	
+	/*return a map containing for every vertices :
+	 * a map containing for every of its edges :
+	 *	    * the id of the dest vertex
+	 *		* the name of the machine where the dest vertex is stored
+	 * result Map<VertexID, Map<DestVertexID, MachineName>>
+	 */
+	
+	public static Map<Long, Map<Long, String>> getConnections(){
+		Map<Long,Map<Long,String>> resultMap = new TreeMap<Long,Map<Long,String>>();
+		Cache<Long, Cell> cellCache = CacheContainer.getCellCache();
+		
+		for (Cell cell : cellCache.values()){
+			if (cell.getCellType().equals(CellType.VERTEX)){
+				Map<Long,String> connectionMap = new TreeMap<Long,String>();
+				for(ImgEdge edge : ((ImgVertex) cell).getEdges()){
+					connectionMap.put(edge.getDestCellId(), StorageTools.getCellAddress(edge.getDestCellId()));
+				}
+				resultMap.put(cell.getId(), connectionMap);
+			}
+		}
+		
+		return resultMap;
 	}
 	
 	private static void runTraversal(DistributedTraversal traversal, 

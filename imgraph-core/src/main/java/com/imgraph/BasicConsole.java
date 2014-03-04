@@ -3,14 +3,18 @@ package com.imgraph;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Map.Entry;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import org.infinispan.Cache;
+import org.infinispan.remoting.transport.Address;
 import org.infinispan.remoting.transport.jgroups.JGroupsAddress;
 import org.infinispan.remoting.transport.jgroups.JGroupsTransport;
 import org.jgroups.Channel;
@@ -164,25 +168,36 @@ public class BasicConsole {
 			    }
 				System.out.println("There are " + edgeCounter/2 + " edges for " + vertexCounter + " vertices.");
 			} else if (command.equals("printConnections")) {
-				Map<Long,Integer> connectionMap = new TreeMap<Long,Integer>();
-			    
-				long vertexCounter = 0;
-				long edgeCounter = 0;
-				Cache<Long, Cell> cellCache = CacheContainer.getCellCache();
-				for (Cell cell : cellCache.values()){
-					if (cell.getCellType().equals(CellType.VERTEX)){
-						vertexCounter++;
-						//getNeighbors(final Long cellId)
-						for(ImgEdge edge : ((ImgVertex) cell).getEdges()){
-							edgeCounter++;
+				Map<Long,Map<Long,String>> connectionsMap = TestTools.getConnections();
+				String result = "";
+				String connectedTo = "";
+				Iterator entries = connectionsMap.entrySet().iterator();
+				while (entries.hasNext()) {
+					result = "";
+					Entry vertex = (Entry) entries.next();
+					Long vertexId = ((Entry<Long, Map<Long,String>>) vertex).getKey();
+					Map<Long,String> edges = ((Entry<Long, Map<Long,String>>) vertex).getValue(); //Edges
+					
+					result += "Vertex " + vertexId + " : "
+							+ "\n\t - is stored @ " + StorageTools.getCellAddress(vertexId);
+					if (edges.size()>0){
+						result += "\n\t - is connected to [";
+						connectedTo = "";
+						for(Map.Entry<Long,String> edge : edges.entrySet()) {
+							if(connectedTo.equals(""))
+								connectedTo += edge.getKey();
+							else
+								connectedTo += ","+edge.getKey();
 						}
-						connectionMap.put(cell.getId(), ((ImgVertex) cell).getEdges().size());
+						connectedTo += "]";
 					}
+					System.out.println(result+connectedTo);	
 				}
-				System.out.println("There are " + edgeCounter/2 + " edges for " + vertexCounter + " vertices.");
-				for(Map.Entry<Long,Integer> entry : connectionMap.entrySet()) {			    	
-			        System.out.println("\tVertex "+ entry.getKey()+" has "+entry.getValue()+" edges and is stored on " + "Unknown");
-			    }
+				int i = 1;
+				for (Address address : CacheContainer.getCacheContainer().getTransport().getMembers()){
+					System.out.println("Machine "+i+"'s Address : "+ address.toString()+", IpAddress : "+StorageTools.getIpAddress(address));
+					i++;
+				}
 			} else if (command.equals("printPortals")) {
 				long vertexCounter = 0;
 				long portalCounter = 0;
@@ -422,6 +437,13 @@ public class BasicConsole {
 				String fileName = IOUtils.readLine("File name: ");
 				try {
 					FileUtilities.writeToFile(fileName);
+					System.out.println("OK");
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			} else if (command.equals("saveD3")) {
+				try {
+					FileUtilities.writeD3ToFile("../data/visu.json");
 					System.out.println("OK");
 				} catch (IOException e) {
 					e.printStackTrace();
@@ -719,7 +741,6 @@ public class BasicConsole {
 			} else if (command.equals("clear")) {
 				CacheContainer.getCellCache().clear();
 				System.out.println("Cell cache cleared");
-				break;
 			} else if (command.equals("exit")) {
 				System.out.println("BYE...");
 				Main.sendStopMessage(Configuration.getProperty(Configuration.Key.NODE_PORT));
