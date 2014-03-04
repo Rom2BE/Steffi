@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Map.Entry;
+import java.util.TreeMap;
 
 import org.infinispan.Cache;
 import org.infinispan.remoting.transport.jgroups.JGroupsAddress;
@@ -25,6 +26,7 @@ import com.imgraph.index.ImgIndexHits;
 import com.imgraph.loader.LoadVertexInfo;
 import com.imgraph.loader.TextFileLoader;
 import com.imgraph.model.Cell;
+import com.imgraph.model.CellType;
 import com.imgraph.model.EdgeType;
 import com.imgraph.model.ImgEdge;
 import com.imgraph.model.ImgVertex;
@@ -142,6 +144,64 @@ public class BasicConsole {
 				ImgVertex v = (ImgVertex) graph.getRawGraph().retrieveCell(Long.parseLong(vertexId));
 				
 				System.out.println(v);
+			} else if (command.equals("printGraph")) {
+				Map<Long,String> vertexMap = new TreeMap<Long,String>();				
+				long vertexCounter = 0;
+				long edgeCounter = 0;
+				Cache<Long, Cell> cellCache = CacheContainer.getCellCache();
+				for (Cell cell : cellCache.values()){
+					if (cell.getCellType().equals(CellType.VERTEX)){
+						vertexCounter++;
+						//System.out.println(cell);
+						for(ImgEdge edge : ((ImgVertex) cell).getEdges()){
+							edgeCounter++;
+						}
+						vertexMap.put(cell.getId(), cell.toString());
+					}
+				}
+				for(Map.Entry<Long,String> entry : vertexMap.entrySet()) {			    	
+			        System.out.println(entry.getValue());
+			    }
+				System.out.println("There are " + edgeCounter/2 + " edges for " + vertexCounter + " vertices.");
+			} else if (command.equals("printConnections")) {
+				Map<Long,Integer> connectionMap = new TreeMap<Long,Integer>();
+			    
+				long vertexCounter = 0;
+				long edgeCounter = 0;
+				Cache<Long, Cell> cellCache = CacheContainer.getCellCache();
+				for (Cell cell : cellCache.values()){
+					if (cell.getCellType().equals(CellType.VERTEX)){
+						vertexCounter++;
+						//getNeighbors(final Long cellId)
+						for(ImgEdge edge : ((ImgVertex) cell).getEdges()){
+							edgeCounter++;
+						}
+						connectionMap.put(cell.getId(), ((ImgVertex) cell).getEdges().size());
+					}
+				}
+				System.out.println("There are " + edgeCounter/2 + " edges for " + vertexCounter + " vertices.");
+				for(Map.Entry<Long,Integer> entry : connectionMap.entrySet()) {			    	
+			        System.out.println("\tVertex "+ entry.getKey()+" has "+entry.getValue()+" edges and is stored on " + "Unknown");
+			    }
+			} else if (command.equals("printPortals")) {
+				long vertexCounter = 0;
+				long portalCounter = 0;
+				Cache<Long, Cell> cellCache = CacheContainer.getCellCache();
+				for (Cell cell : cellCache.values()){
+					if (cell.getCellType().equals(CellType.VERTEX)){
+						vertexCounter++;
+						System.out.println(cell.getId());
+						for (Entry<String, Integer> memberEntry : graph.getRawGraph().getMemberIndexes().entrySet()) {
+							System.out.println("\n\t" + memberEntry.getKey() + ":");
+							if (((ImgVertex) cell).getEdges().size() > 0){
+								for(ImgEdge edge : ((ImgVertex) cell).getEdgesByAddress(memberEntry.getKey())){
+									System.out.println(edge);
+								}								
+							}
+						}
+					}
+				}
+				System.out.println("There are " + portalCounter + " portal for " + vertexCounter + " vertices stored on "+graph.getRawGraph().getMemberIndexes().entrySet().size()+" machines.");
 			} else if (command.equals("2HN")) {
 				for (Long cellId : Local2HopNeighbors.getCellIds()) {
 					System.out.println("Cell ID: " + cellId);
@@ -339,12 +399,13 @@ public class BasicConsole {
 				} catch (Exception ex) {
 					ex.printStackTrace();
 				}
-			} else if (command.equals("genUnEd")) { //Generate Undirected Edges
+			} else if (command.equals("genEdges")) { //Generate Undirected Edges
 				try {	
 					long numEdges = Long.parseLong(IOUtils.readLine("Number of edges: "));
 					long minId = Long.parseLong(IOUtils.readLine("Minimum start vertex id: "));
 					long maxId = Long.parseLong(IOUtils.readLine("Maximum end vertex id: "));
-					TestTools.genUndirectedEdges(minId, maxId, numEdges);
+					boolean directed = IOUtils.readLine("Directed (Y/N): ").equals("Y");
+					TestTools.genEdges(minId, maxId, numEdges, directed);
 				} catch (Exception ex) {
 					ex.printStackTrace();
 				}
@@ -382,7 +443,6 @@ public class BasicConsole {
 					System.out.println(loadMsg);
 					System.out.println(deSerMsg);
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 				

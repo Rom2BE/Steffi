@@ -203,9 +203,9 @@ public class TestTools {
 			i++;
 		}
 	}
-
-	public static void genUndirectedEdges(long minId, long maxId,
-			long numEdges) {
+	
+	public static void genEdges(long minId, long maxId,
+			long numEdges, boolean directed) {
 		maxId++;
 		ImgraphGraph graph = ImgraphGraph.getInstance();
 		long i = 0;
@@ -217,8 +217,17 @@ public class TestTools {
 		Random randomGen = new Random();
 		graph.registerItemName("Friend");
 		
-		Cache<Long, Cell> cellCache;
+		Cache<Long, Cell> cellCache = CacheContainer.getCellCache();
 		
+		//Count the number of vertex in the range
+		long vertexCounter = 0;
+		for (Cell cell : cellCache.values()){
+			if (cell.getCellType().equals(CellType.VERTEX)){
+				if (cell.getId() >= minId && cell.getId() < maxId)
+					vertexCounter++;
+			}
+		}
+		System.out.println(vertexCounter + " vertices found in the range ["+minId+","+(maxId-1)+"]");
 		while(i<numEdges){
 			if(!allFull){
 				cellCache = CacheContainer.getCellCache();
@@ -229,16 +238,15 @@ public class TestTools {
 					idV1 = nextLong(randomGen, maxId - minId) + minId;
 					for (Cell cell : cellCache.values()){
 						if (cell.getCellType().equals(CellType.VERTEX)){ 
-							if (((ImgVertex) cell).getEdges().size() == (maxId-minId)-1){
+							if (((ImgVertex) cell).getEdges().size() == vertexCounter-1){
 								if (cell.getId() == idV1){
 									fullEdges=true;
 								}
 							}
-							else
+							else if(cell.getId() >= minId && cell.getId() < maxId)
 								allFull = false;
 						}
 					}
-					
 				}while((graph.getVertex(idV1) == null || fullEdges) && !allFull);
 				if(!allFull){
 					//Find End Vertex			
@@ -257,7 +265,10 @@ public class TestTools {
 					}while(graph.getVertex(idV2) == null || idV1 == idV2 || edgeAlreadyExist || fullEdges);
 					//Connect
 					graph.startTransaction();
-					graph.addUndirectedEdge("", graph.getVertex(idV1), graph.getVertex(idV2), "Friend");
+					if (directed)
+						graph.addEdge("", graph.getVertex(idV1), graph.getVertex(idV2), "Friend");
+					else
+						graph.addUndirectedEdge("", graph.getVertex(idV1), graph.getVertex(idV2), "Friend");
 					graph.stopTransaction(Conclusion.SUCCESS);
 					System.out.println(idV1 + " & " + idV2 + " are now Friends.");
 				}
@@ -265,12 +276,10 @@ public class TestTools {
 			i++;
 		}
 		if (allFull){
-			long vertexCounter = 0;
 			long edgeCounter = 0;
 			cellCache = CacheContainer.getCellCache();
 			for (Cell cell : cellCache.values()){
-				if (cell.getCellType().equals(CellType.VERTEX)){
-					vertexCounter++;
+				if (cell.getCellType().equals(CellType.VERTEX) && cell.getId() >= minId && cell.getId() < maxId){
 					for(ImgEdge edge : ((ImgVertex) cell).getEdges()){
 						edgeCounter++;
 					}
