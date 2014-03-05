@@ -18,13 +18,13 @@
   ~ You should have received a copy of the GNU Lesser General Public
   ~ License along with this software; if not, write to the Free
   ~ Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
-  ~ 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+  ~ 02110-1301 USA, or see the FSF site: http://www.fsf.org. 228.6.7.8
   -->
 <config xmlns="urn:org:jgroups"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="urn:org:jgroups file:schema/JGroups-3.2.xsd">
    <UDP
-         mcast_addr="${jgroups.udp.mcast_addr:228.6.7.8}"
+         mcast_addr="${jgroups.udp.mcast_addr:10.37.129.2}"
          mcast_port="${jgroups.udp.mcast_port:46655}"
          tos="8"
          ucast_recv_buf_size="20m"
