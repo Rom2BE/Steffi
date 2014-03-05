@@ -405,7 +405,7 @@ public class BasicConsole {
 
 					Map<String, Integer> cellCount = StorageTools.countCellsInCluster();
 					long totalCount = 0;
-					
+					//TODO Incorrect method for cell counting (only count on the local machine)
 					for (Entry<String, Integer> entry : cellCount.entrySet()) {
 						System.out.println("Machine " + entry.getKey() + ": " + entry.getValue() + " cells");
 						totalCount += entry.getValue();

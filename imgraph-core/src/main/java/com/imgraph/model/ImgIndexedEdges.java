@@ -30,8 +30,4 @@ public interface ImgIndexedEdges {
 	public abstract boolean hasMoreThanOneEdge();
 
 	public abstract void trimToSize();
-
-	
-	
-
 }

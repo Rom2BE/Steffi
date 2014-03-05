@@ -174,9 +174,4 @@ public class ImgMapEdges implements Serializable, ImgIndexedEdges {
 		edges.trimToSize();
 		edgeMap.compact();
 	}
-	
-
-	
-	
-
 }
