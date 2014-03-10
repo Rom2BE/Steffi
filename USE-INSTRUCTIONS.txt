@@ -23,7 +23,7 @@ To stop the server, from the same directory used to start the server execute the
 	
 III. Starting of the Gremlin console
 ====================================
-From the main Gremlin directory execute the follwing command
+From the main Gremlin directory execute the following command
 	./bin/gremlin.sh
 
 Then, the Gremlin console will be started. Before executing the Gremlin commands or scripts you have to start the Imgraph 

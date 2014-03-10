@@ -24,8 +24,8 @@
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="urn:org:jgroups file:schema/JGroups-3.2.xsd">
    <UDP
-         mcast_addr="${jgroups.udp.mcast_addr:228.6.7.8}"
-         mcast_port="${jgroups.udp.mcast_port:46655}"
+         mcast_addr="${jgroups.udp.mcast_addr:228.8.8.8}"
+         mcast_port="${jgroups.udp.mcast_port:7600}"
          tos="8"
          ucast_recv_buf_size="20m"
          ucast_send_buf_size="640k"
