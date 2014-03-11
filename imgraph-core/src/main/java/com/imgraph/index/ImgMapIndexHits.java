@@ -38,7 +38,6 @@ public class ImgMapIndexHits<T> implements ImgIndexHits<T> {
 		Object nextElementId = indexIterator.next();
 		T element;
 		
-		
 		try {
 		
 			if (elementClass.equals(ImgVertex.class)) {
@@ -75,5 +74,4 @@ public class ImgMapIndexHits<T> implements ImgIndexHits<T> {
 	public Iterator<T> iterator() {
 		return this;
 	}
-
 }

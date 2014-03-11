@@ -113,7 +113,6 @@ public class ImgMapEdges implements Serializable, ImgIndexedEdges {
 	}
 
 
-
 	/* (non-Javadoc)
 	 * @see com.imgraph.model.ImgIndexedEdges#clear()
 	 */
@@ -143,9 +142,7 @@ public class ImgMapEdges implements Serializable, ImgIndexedEdges {
 			
 			ImgEdge.removeEdgeFromCollection(edge, edgeMap.get(calculateNameMapIndex(nameIndex)));
 			ImgEdge.removeEdgeFromCollection(edge, edgeMap.get(calculateTypeNameMapIndex(typeCode, nameIndex)));
-			
 		}
-				
 	}
 
 	/* (non-Javadoc)

@@ -88,16 +88,13 @@ public class ImgGraph implements Serializable {
 		traversalManagerIps = Configuration.getProperty(Key.MANAGER_IPS).split(",");
 	}
 	
-	
 	public ZMQ.Context getZMQContext() {
-		
 		return this.context;
 	}
 	
 	private boolean isLocalCell(long cellId) {
 		return StorageTools.getCellAddress(cellId).equals(localAddress);
 	}
-	
 	
 	public <T extends Cell> ImgIndex<T> getIndex(String indexName, Class<T> className) {
 		return new ImgMapIndex<T>(indexName, className, false);
@@ -115,8 +112,6 @@ public class ImgGraph implements Serializable {
 		return compressCells;
 	}
 	
-	
-	
 	public void initializeMemberIndexes() {
 		memberIndexes.clear();
 		for (Address address : CacheContainer.getCacheContainer().getTransport().getMembers()) 
@@ -128,11 +123,8 @@ public class ImgGraph implements Serializable {
 		
 	}
 	
-	
 	public int getNextTraversalManagerIndex() {
-		int value = traversalManagerTurn.getAndIncrement();
-		
-		
+		int value = traversalManagerTurn.getAndIncrement();	
 		return Math.abs(value%traversalManagerIps.length) ;
 	}
 	
@@ -152,7 +144,6 @@ public class ImgGraph implements Serializable {
 		return getMemberIndex(localAddress);
 	}
 	
-	
 	public void sendMessageToNode(int memberIndex, IdentifiableMessage message,
 			ResponseProcessor sender) {
 		if (nodeClients == null) 
@@ -160,7 +151,6 @@ public class ImgGraph implements Serializable {
 		
 		nodeClients.sendMessage(memberIndex, message, sender);
 	}
-	
 	
 	public int getMemberIndex(String address) {
 		return getMemberIndexes().get(address);
@@ -170,10 +160,8 @@ public class ImgGraph implements Serializable {
 		if (memberIndexes == null)
 			throw new RuntimeException("The cluster must be initialized");
 		
-		
 		return memberIndexes;
 	}
-	
 	
 	public void storeCell(long cellId, Cell cell) {
 		Cache <Long, Object> cache = CacheContainer.getCellCache();
@@ -183,7 +171,6 @@ public class ImgGraph implements Serializable {
 		else
 			cache.put(cellId, cell);
 	}
-	
 	
 	public int getNumberOfMembers() {
 		if (memberIndexes.isEmpty())
@@ -196,7 +183,6 @@ public class ImgGraph implements Serializable {
 			throw new RuntimeException("The edge name '" + name + "' has to be registered in the graph");
 	}
 	
-	
 	public void registerLocalItemName(String name) {
 		int index = itemNames.size();
 		
@@ -208,8 +194,6 @@ public class ImgGraph implements Serializable {
 		if (itemNames.containsKey(name))
 			return;
 		
-		
-		
 		try {
 			DistributedExecutorService des = new DefaultExecutorService(CacheContainer.getCellCache());
 			GraphNamesManager graphNamesManager = new GraphNamesManager(name);
@@ -217,18 +201,12 @@ public class ImgGraph implements Serializable {
 			
 			for (Future<Boolean> future : results) {
 				if (!future.get(5, TimeUnit.MINUTES))
-					 throw new RuntimeException("Error registering the new name");
-				
+					 throw new RuntimeException("Error registering the new name");			
 		    }
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
-		
-		
-		
 	}
-	
-	
 	
 	public int getItemNameIndex(String name) {
 		
@@ -245,9 +223,6 @@ public class ImgGraph implements Serializable {
 	public int getNumberOfEdgeNames() {
 		return itemNames.size();
 	}
-	
-	
-	
 	
 	public ImgVertex addVertex(Long id, String vertexName) {
 		ImgVertex v = new ImgVertex(id, vertexName);
@@ -277,22 +252,17 @@ public class ImgGraph implements Serializable {
 			CellTransactionThread.get().rollback();
 	}
 	
-	
-	
 	public boolean storeSerializedCells() {
 		return serializedCells;
 	}
 	
 	public ImgIndex<ImgVertex> getDefaultVertexIndex() {
-		
 		return vertexIndex;
 	}
 	
-	public ImgIndex<ImgEdge> getDefaultEdgeIndex() {
-		
+	public ImgIndex<ImgEdge> getDefaultEdgeIndex() {	
 		return edgeIndex;
 	}
-	
 	
 	public ImgVertex getVertex(long vertexId) {
 		return (ImgVertex) retrieveCell(vertexId);
@@ -341,7 +311,6 @@ public class ImgGraph implements Serializable {
 		cellCache.remove(cellId);
 	}
 	
-	
 	public Iterable<Long> getCellIds() {
 		Cache<Long, Cell> cellCache = CacheContainer.getCellCache();
 		System.out.println("Cache size : " + cellCache.size());
@@ -358,7 +327,6 @@ public class ImgGraph implements Serializable {
 	public Iterable<ImgVertex> getVertices() {
 		throw new UnsupportedOperationException();
 	}
-	
 	
 	public ImgVertex getVertexByName(String vertexName) {
 		Cache<Long, Cell> cellCache = CacheContainer.getCellCache();
@@ -388,7 +356,6 @@ public class ImgGraph implements Serializable {
 			nodeClients.close();
 	}
 	
-	
 	public <T extends Cell> Iterator <ImgIndex<T>>  getUserIndexes(final Class<T> indexClass) {
 		final Iterator<String> nameIterator = CacheContainer.getIndexCacheNames().iterator();
 		
@@ -402,8 +369,7 @@ public class ImgGraph implements Serializable {
 			@Override
 			public ImgIndex<T> next() {
 				String nextName = nameIterator.next();
-				return ImgGraph.getInstance().getIndex(nextName, indexClass);
-					
+				return ImgGraph.getInstance().getIndex(nextName, indexClass);	
 			}
 			
 			@Override
@@ -414,7 +380,4 @@ public class ImgGraph implements Serializable {
 		
 		return iterator;
 	}
-	
-	
-	
 }

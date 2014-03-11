@@ -86,8 +86,4 @@ public class IndexOperation<T extends Cell> {
 		
 		
 	}
-	
-	
-	
-	
 }

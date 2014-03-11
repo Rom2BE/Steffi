@@ -23,16 +23,11 @@ import com.imgraph.storage.IndexOperation.IndexOperationItem;
  */
 public class ImgMapIndex<T extends Cell> implements ImgIndex<T> {
 
-	/**
-	 * 
-	 */
 	//private static final long serialVersionUID = -7157672464559662812L;
 	private final String name;
 	private final Class<T> indexClass;
 	
 	private Cache<IndexKeyValue, ConcurrentHashMap<Object, Boolean>> map;
-	
-	
 	
 	public ImgMapIndex(String name, Class<T> indexClass, boolean createCache) {
 		this.name = name;
@@ -70,12 +65,10 @@ public class ImgMapIndex<T extends Cell> implements ImgIndex<T> {
 		if (idElements == null || idElements.isEmpty()) 
 			return new ImgMapIndexHits<T>(IteratorUtils.emptyIterator(), 0, indexClass);
 		else 			
-			return new ImgMapIndexHits<T>(idElements.keySet().iterator(), idElements.size(), indexClass);
-		
+			return new ImgMapIndexHits<T>(idElements.keySet().iterator(), idElements.size(), indexClass);	
 	}
 
-	public void commitChanges(IndexOperation<T> operations) {
-		
+	public void commitChanges(IndexOperation<T> operations) {	
 		if (operations.getNewKeyValues() != null) {
 			for (IndexOperationItem opItem : operations.getNewKeyValues()) {
 				IndexKeyValue indexKeyValue = new IndexKeyValue(opItem.getKey(), opItem.getValue());
@@ -123,7 +116,6 @@ public class ImgMapIndex<T extends Cell> implements ImgIndex<T> {
 		
 	}
 	
-	
 	@Override
 	public void put(String key, Object value, T element) {
 		
@@ -160,6 +152,5 @@ public class ImgMapIndex<T extends Cell> implements ImgIndex<T> {
 		}
 		
 		return false;
-	}
-	
+	}	
 }

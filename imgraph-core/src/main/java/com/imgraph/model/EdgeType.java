@@ -21,7 +21,6 @@ public enum EdgeType {
 		codeMap.put(3, UNDIRECTED);
 		codeMap.put(4, HYPEREDGE);
 	}
-	
 			
 	private int code;
 	

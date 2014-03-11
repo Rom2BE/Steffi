@@ -146,12 +146,6 @@ public class CellOperations {
 
 		public Object getNewValue() {
 			return newValue;
-		}
-		
-		
+		}	
 	}
-	 
-	
-	
-
 }

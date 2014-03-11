@@ -35,7 +35,4 @@ public class Update2HNReqMsg extends IdentifiableMessage {
 	public void setRemovedEdges(List<ImgEdge> removedEdges) {
 		this.removedEdges = removedEdges;
 	}
-	
-
-
 }

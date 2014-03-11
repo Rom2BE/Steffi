@@ -50,9 +50,4 @@ public class EdgeIndexEntry implements Serializable {
 			return false;
 		return true;
 	}
-
-	
-	
-	
-	
 }

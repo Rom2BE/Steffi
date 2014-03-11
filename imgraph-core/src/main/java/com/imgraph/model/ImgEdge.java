@@ -38,9 +38,7 @@ public class ImgEdge extends Cell implements Serializable {
 		this.destCellId = destCellId;
 		this.sourceCellId = sourceCellId;
 		this.edgeType = edgeType;
-	
 	}
-
 
 	/* (non-Javadoc)
 	 * @see com.imgraph.model.ImgEdgeDef#getSourceCellId()
@@ -152,12 +150,8 @@ public class ImgEdge extends Cell implements Serializable {
 							+ " VALUE: " + value);
 					return true;
 				}
-			});
-			
-
+			});	
 		}
-		
-		
 		return string.toString();
 	}
 
@@ -172,9 +166,4 @@ public class ImgEdge extends Cell implements Serializable {
 		
 		return clon;
 	}
-
-
-	
-		
-
 }

@@ -50,7 +50,6 @@ public class ImgraphVertex extends ImgraphElement implements Vertex  {
             edgeIterable = new ImgraphVertexEdgeIterable<Edge>(graph, vertex, direction, labels);
         }
         
-        
 
         public Iterator<ImgraphVertex> iterator() {
             final Iterator<ImgEdge> itty;

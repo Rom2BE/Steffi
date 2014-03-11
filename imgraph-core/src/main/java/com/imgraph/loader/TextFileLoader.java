@@ -40,7 +40,6 @@ import com.tinkerpop.blueprints.impls.imgraph.ImgraphGraph;
 public class TextFileLoader implements ResponseProcessor {
 
 	private int pendingLoadBlocks;
-	
 	private boolean fileReadCompleted;
 	private boolean loadingInProcess;
 	private Object lock;
@@ -54,10 +53,7 @@ public class TextFileLoader implements ResponseProcessor {
 	private int vertexCounter;
 	private int numberOfLoaders;
 	private boolean loaderIsMember;
-
-	private int processVerticesCounter;
-
-	
+	private int processVerticesCounter;	
 	
 	public TextFileLoader() {
 		

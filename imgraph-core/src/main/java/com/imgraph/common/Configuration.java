@@ -71,10 +71,7 @@ public class Configuration {
 		SingletonHolder.instance.setSystemProperties();
 	}
 	
-	
 	public static String getProperty(Key key){
 		return SingletonHolder.instance.properties.getProperty(key.toString()); 
-	}
-	
-	
+	}	
 }

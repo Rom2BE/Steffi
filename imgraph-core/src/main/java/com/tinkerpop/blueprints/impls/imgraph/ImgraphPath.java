@@ -76,10 +76,6 @@ public class ImgraphPath  {
 				return pathElements.iterator();
 			}
 		};
-		
-		
-		
-		
 	}
 
 
@@ -88,7 +84,4 @@ public class ImgraphPath  {
 		
 		return path.toString();
 	}
-	
-	
-
 }

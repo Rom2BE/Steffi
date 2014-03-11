@@ -172,8 +172,6 @@ public class ImgpFileTools implements ResponseProcessor {
 	}
 	
 	
-	
-	
 	private void addLoadVertexInfo(Map<String, List<LoadVertexInfo>> addressVertices, 
 			LoadVertexInfo loadVertexInfo) {
 		String cellAddress = StorageTools.getCellAddress(loadVertexInfo.getVertexId());
@@ -197,8 +195,6 @@ public class ImgpFileTools implements ResponseProcessor {
 		LoadVertexInfo loadVertexInfo =  null;
 		long counter=0;
 		Date startDate, endDate;
-		
-		
 		
 		try {
 			startDate = new Date();
@@ -231,9 +227,6 @@ public class ImgpFileTools implements ResponseProcessor {
 					} catch (NoSuchElementException nse) {
 						
 					}
-					
-					
-					
 					
 					addLoadVertexInfo(addressVertices, loadVertexInfo);
 					counter++;
@@ -271,8 +264,6 @@ public class ImgpFileTools implements ResponseProcessor {
 			updateLocal1HopNeighborsV2();
 			Date subEndDate = new Date();
 			ImgLogger.log(LogLevel.INFO, "2 Hop neighbors processed in " + (subEndDate.getTime() - subStartDate.getTime()) + " ms");
-			
-			
 			
 			endDate =  new Date();
 
@@ -384,8 +375,4 @@ public class ImgpFileTools implements ResponseProcessor {
 		
 		return response;
 	}
-	
-	
-	
-	
 }

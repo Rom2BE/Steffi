@@ -65,9 +65,6 @@ public class CommandWorkerManager {
 		if (msgFromReq)
 			frontend.send(empty, ZMQ.SNDMORE);
 		frontend.send(msg, 0);
-		
-		
-		
 	}
 	
 	public void stop() {
@@ -81,7 +78,4 @@ public class CommandWorkerManager {
 		backendAsyncCommand.close();
 		backendSyncCommand.close();
 	}
-	
-	
-	
 }

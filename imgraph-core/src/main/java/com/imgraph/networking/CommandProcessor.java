@@ -52,9 +52,6 @@ public abstract class CommandProcessor {
 		socket.send(Message.convertMessageToBytes(repMsg), 0);
 	}
 	
-	
-	
-	
 	public static void processWriteFileRequest(Socket socket, WriteFileReqMsg reqMsg) throws IOException {
 		Message writeResponse = ImgpFileTools.processWriteRequest(reqMsg);
 		socket.send(Message.convertMessageToBytes(writeResponse), 0);
@@ -101,6 +98,5 @@ public abstract class CommandProcessor {
 		response.setBody("OK");
 		response.setId(update2HNReqMsg.getId());
 		socket.send(Message.convertMessageToBytes(response), 0);
-	}
-	
+	}	
 }

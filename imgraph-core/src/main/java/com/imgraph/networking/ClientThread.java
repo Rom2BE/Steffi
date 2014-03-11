@@ -25,8 +25,6 @@ public class ClientThread implements Runnable{
 	private boolean alive;
 	private ResponseProcessor responseProcessor;
 
-	
-	
 	public ClientThread(String ipAddress, String address, String loadMngId,
 			ResponseProcessor loadResponseProcessor) {
 		
@@ -55,7 +53,6 @@ public class ClientThread implements Runnable{
 	@Override
 	public void run() {
 
-		
 		alive = true;
 		
 		try {
@@ -66,20 +63,15 @@ public class ClientThread implements Runnable{
 					
 					Message message = Message.readFromBytes(msg);
 					
-					responseProcessor.processResponse(message);
-					
-					
+					responseProcessor.processResponse(message);			
 				}
 				
 				//Send from queue
 				if (!messageQueue.isEmpty()) {
 					Message mq = messageQueue.poll();
 					
-					socket.send(Message.convertMessageToBytes(mq), 0);
-					
-					
+					socket.send(Message.convertMessageToBytes(mq), 0);									
 				}
-				
 			}
 		} catch (Exception x) {
 			if (alive)
@@ -87,8 +79,6 @@ public class ClientThread implements Runnable{
 		} finally {
 			this.socket.close();
 			this.context.term();
-		}
-		
-		
+		}		
 	}
 }

@@ -40,8 +40,6 @@ public abstract class Cell implements Serializable {
 	
 	
 	public Cell(Long id, String name) {
-		
-		
 		if (id == null)
 			this.id = CellSequence.getNewCellId();
 		else
@@ -57,8 +55,6 @@ public abstract class Cell implements Serializable {
 		return attributes;
 	}
 	
-	
-	
 	public void trimToSize() {
 		if (attributes != null)
 			attributes.compact();
@@ -71,7 +67,6 @@ public abstract class Cell implements Serializable {
 	public void putAttributes(TIntObjectMap<Object> attributes) {
 		getAndInitAttributes().putAll(attributes);
 	}
-	
 	
 	public void putAttribute(String key, Object value) {
 		int keyIndex = getKeyIndex(key);
@@ -91,7 +86,6 @@ public abstract class Cell implements Serializable {
 		return value;
 	}
 	
-	
 	public Object getAttribute(String key) {
 		if (attributes != null)
 			return attributes.get(getKeyIndex(key));
@@ -102,7 +96,6 @@ public abstract class Cell implements Serializable {
 		if (attributes != null)
 			attributes.clear();
 	}
-	
 	
 	public Iterable<String> getAttributeKeys() {
 		return new Iterable<String>() {
@@ -126,15 +119,12 @@ public abstract class Cell implements Serializable {
 				} else
 					return IteratorUtils.emptyIterator();
 			}
-		};
-		
+		};	
 	}
 	
 	public long getId() {
 		return id;
 	}
-	
-	
 	
 	public String getName() {
 		if (nameIndex != null)
@@ -144,10 +134,8 @@ public abstract class Cell implements Serializable {
 	
 	protected void setName(String name) {
 		if (name != null) 
-			nameIndex = ImgGraph.getInstance().getItemNameIndex(name);
-		
+			nameIndex = ImgGraph.getInstance().getItemNameIndex(name);	
 	}
-	
 	
 	public CellType getCellType() {
 		return cellType;
@@ -171,13 +159,9 @@ public abstract class Cell implements Serializable {
 					return true;
 				}
 			});
-			
-			
 		}
-		
 		return string.toString();
 	}
-
 	
 	public Cell clone() {
 		Cell cell = null;
@@ -198,8 +182,4 @@ public abstract class Cell implements Serializable {
 		
 		return cell;
 	}
-	
-	
-	
-
 }

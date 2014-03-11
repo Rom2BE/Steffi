@@ -206,9 +206,6 @@ public class Local2HopNeighborProcessor implements Serializable, Callable<Intege
 						vertices.clear();
 					//vertexCounter = 0;
 				}
-				
-				
-				
 			}
 			processExtEdges(addressVertexIds, vertices);
 			System.out.println("2HN calculation completed");

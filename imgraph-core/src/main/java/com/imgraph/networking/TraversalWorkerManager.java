@@ -46,13 +46,6 @@ public class TraversalWorkerManager {
 		public TraversalReqMsg getMessage() {
 			return message;
 		}
-
-
-
-
-
-
-
 	}
 
 
@@ -91,8 +84,7 @@ public class TraversalWorkerManager {
 		
 		if (worker != null) {
 			traversalWorkers[worker].processRepMessage(searchRepMsg);
-		} 
-		
+		} 	
 	}
 	
 	
@@ -118,8 +110,6 @@ public class TraversalWorkerManager {
 
 	}
 
-	
-	
 
 	public void freeTraversalWorker(int freeId) throws IOException {
 
@@ -159,9 +149,6 @@ public class TraversalWorkerManager {
 				break;
 			}
 		}
-		
-		
-		
 	}
 
 
@@ -175,7 +162,4 @@ public class TraversalWorkerManager {
 		}
 		return valRet;
 	}
-
-
-
 }

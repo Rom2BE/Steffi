@@ -50,7 +50,6 @@ public class LoadVertexInfo implements Serializable {
 		return vertexId;
 	}
 	
-	
 	public List<Long> getInEdges() {
 		return inEdges;
 	}
@@ -71,9 +70,7 @@ public class LoadVertexInfo implements Serializable {
 		this.undirectedEdges.add(edgeId);
 	}
 	
-
 	public List<Long> getUndirectedEdges() {
 		return undirectedEdges;
 	}
-	
 }

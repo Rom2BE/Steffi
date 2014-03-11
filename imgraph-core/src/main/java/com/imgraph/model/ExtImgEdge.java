@@ -16,9 +16,6 @@ public class ExtImgEdge extends ImgEdge implements Serializable{
 	private static final long serialVersionUID = 6036619926344459982L;
 	private byte neighborFlag;
 	
-	
-	
-	
 	public ExtImgEdge(long sourceCellId,
 			long destCellId,
 			EdgeType edgeType,
@@ -38,16 +35,12 @@ public class ExtImgEdge extends ImgEdge implements Serializable{
 		super(id, name);
 	}
 	
-	
 	public byte getNeighborFlag() {
 		return neighborFlag;
 	}
 	public void setNeighborFlag(byte neighborFlag) {
 		this.neighborFlag = neighborFlag;
 	}
-	
-	
-	
 	
 	@Override
 	public Cell clone() {
@@ -60,7 +53,4 @@ public class ExtImgEdge extends ImgEdge implements Serializable{
 	public String toString() {
 		return "[" + super.toString() + " , " + neighborFlag + "]"; 
 	}
-
-	
-	
 }

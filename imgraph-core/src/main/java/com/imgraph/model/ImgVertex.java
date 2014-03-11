@@ -23,11 +23,7 @@ public class ImgVertex extends Cell {
 	 * 
 	 */
 	private static final long serialVersionUID = -7593264602525689457L;
-	
-	
 	private ImgIndexedEdges[] edgesAddresses;
-	
-	
 	private List<ImgEdge> edges;
 	
 	public ImgVertex(Long id, String name, boolean transactionSupport) {
@@ -49,8 +45,6 @@ public class ImgVertex extends Cell {
 		this(id, name, true);
 	}
 	
-	
-	
 	protected ImgVertex(Long id,
 			String cellType,
 			String name, 
@@ -59,15 +53,13 @@ public class ImgVertex extends Cell {
 		super(id, name);
 		this.cellType = CellType.VERTEX;
 	
-		this.edges = edges;
-		
+		this.edges = edges;	
 	}
 	
 	
 	public ImgIndexedEdges[] getEdgeAddresses() {
 		return edgesAddresses;
 	}
-	
 	
 	@Override
 	public void trimToSize() {
@@ -95,9 +87,9 @@ public class ImgVertex extends Cell {
 			adrEdges = new ImgMapEdges();
 			edgesAddresses[addressIndex] = adrEdges;
 		}
-		adrEdges.addEdge(edge);
-		
+		adrEdges.addEdge(edge);		
 	}
+	
 	
 	public void removeEdgeAddress(ImgEdge edge, String address) {
 		int addressIndex = ImgGraph.getInstance().getMemberIndex(address);
@@ -357,13 +349,5 @@ public class ImgVertex extends Cell {
 		}
 		
 		return clon;
-	}
-	
-	
-	
-	
-	
-	
-	
-	
+	}	
 }

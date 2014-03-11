@@ -64,9 +64,5 @@ public class IndexKeyValue implements Serializable {
 		} else if (!object.equals(other.object))
 			return false;
 		return true;
-	}
-	
-		
-	
-	
+	}	
 }

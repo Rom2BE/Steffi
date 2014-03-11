@@ -19,9 +19,7 @@ import java.util.Enumeration;
 public class CommonTools {
 	
 	
-	public static String getLocalIP()
-    {
-
+	public static String getLocalIP(){
         String ipOnly = "";
         try
         {
@@ -64,8 +62,6 @@ public class CommonTools {
     }
 	
 	
-	
-	
 	public static byte[] convertObjectToBytes(Object object) throws IOException {
 		byte [] msg = null;
 		ByteArrayOutputStream bos;
@@ -74,17 +70,13 @@ public class CommonTools {
 		out = new ObjectOutputStream(bos);
 		out.writeObject(object);
 		out.flush();
-		
 		bos.flush();
-		
 		
 		msg = bos.toByteArray();
 		out.close();
 		bos.close();
 		return msg;
 	}
-	
-	
 	
 	
 	public static Object readFromBytes(byte [] msg) throws IOException {
@@ -102,10 +94,6 @@ public class CommonTools {
 	
 		
 	public static byte[] serialize(Object object) throws IOException {
-		
-		
 		return convertObjectToBytes(object);
 	}
-	
-
 }

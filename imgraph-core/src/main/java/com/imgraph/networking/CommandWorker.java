@@ -31,8 +31,6 @@ public class CommandWorker implements Runnable {
 		alive = false;
 	}
 	
-	
-
 	@Override
 	public void run() {
 		Socket worker = context.socket(ZMQ.REP);

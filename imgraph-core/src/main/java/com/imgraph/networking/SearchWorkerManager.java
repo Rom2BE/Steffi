@@ -87,11 +87,6 @@ public class SearchWorkerManager {
 			managerClientSockets[i].connect("tcp://" + traversalManagerIP);
 			i++;
 		}
-			
-		
-		
-		
-		
 	}
 	
 	
@@ -229,9 +224,6 @@ public class SearchWorkerManager {
 			}
 		}
 	}
-	
-	
-	
 	
 	
 	public void stop() {
