@@ -82,11 +82,11 @@ public class ImgraphGraph implements Graph, TransactionalGraph, IndexableGraph {
 	private ImgraphGraph() {
 		this.rawGraph = ImgGraph.getInstance();
 	}
+
 	
 	public ImgGraph getRawGraph() {
 		return rawGraph;
 	}
-
 
 	@Override
 	public Edge addEdge(Object id, Vertex outVertex, Vertex inVertex, String name) {
@@ -96,9 +96,7 @@ public class ImgraphGraph implements Graph, TransactionalGraph, IndexableGraph {
 		
 		ImgEdge rawEdge = outImgVertex.addEdge(inImgVertex, true, name);
 		
-		return new ImgraphEdge(rawEdge, this);
-		
-		
+		return new ImgraphEdge(rawEdge, this);		
 	}
 	
 	public Edge addUndirectedEdge(Object id, Vertex outVertex, Vertex inVertex, String name) {
@@ -109,7 +107,6 @@ public class ImgraphGraph implements Graph, TransactionalGraph, IndexableGraph {
 		
 		return new ImgraphEdge(rawEdge, this);
 	}
-	
 
 	@Override
 	public Vertex addVertex(Object id) {
@@ -178,9 +175,6 @@ public class ImgraphGraph implements Graph, TransactionalGraph, IndexableGraph {
 			throw new RuntimeException("Id cannot be null");
 		}
 			
-			
-			
-		
 		if (cell != null) {
 			if (!cell.getCellType().equals(CellType.VERTEX)) {
 				throw new RuntimeException("The provided id doesn't correspond to a vertex");
@@ -223,10 +217,10 @@ public class ImgraphGraph implements Graph, TransactionalGraph, IndexableGraph {
 		rawGraph.removeAll();
 	}
 	
+	
 	public void startTransaction() {
 		rawGraph.startTransaction();
 	}
-	
 
 	@Override
 	public void stopTransaction(Conclusion conclusion) {
@@ -251,8 +245,6 @@ public class ImgraphGraph implements Graph, TransactionalGraph, IndexableGraph {
 		} else {
 			throw new RuntimeException("The index class must be either ImgraphVertex or ImgraphEdge");
 		}
-			
-		
 	}
 
 	@Override
@@ -278,7 +270,7 @@ public class ImgraphGraph implements Graph, TransactionalGraph, IndexableGraph {
 		}
 		
 	}
-
+	//TODO
 	@Override
 	public Iterable<Index<? extends Element>> getIndices() {
 		
@@ -308,6 +300,4 @@ public class ImgraphGraph implements Graph, TransactionalGraph, IndexableGraph {
 	public GraphQuery query() {
 		return new DefaultGraphQuery(this);
 	}
-	
-
 }

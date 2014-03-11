@@ -13,8 +13,6 @@ import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.Map.Entry;
 import java.awt.Desktop;
-import java.net.URI;
-import java.net.URISyntaxException;
 
 import org.infinispan.Cache;
 import org.codehaus.jackson.JsonGenerationException;
@@ -156,10 +154,10 @@ public class FileUtilities {
 		}
 	}
 	
-	public static void writeD3ToFile(String fileName) throws IOException {
+	public static void writeD3ToFile(String fileName, Long maxID) throws IOException {
 		ObjectMapper objectMapper = new ObjectMapper();
 		Map<String, Object> mapObject = new HashMap<String, Object>();
-		Map<Long,Map<Long,String>> connectionsMap = TestTools.getConnections();
+		Map<Long,Map<Long,String>> connectionsMap = TestTools.getConnections(maxID);
 		//First Loop : create all vertices using keySet()
 		Map<Long, Integer> indexMap = new HashMap<Long, Integer>();
 		List<Object> nodeList = new ArrayList<Object>();
@@ -167,7 +165,7 @@ public class FileUtilities {
 		for (Long id : connectionsMap.keySet()){
 			Map<String, Object> node = new HashMap<String, Object>();
 			node.put("name", "Vertex " + id);
-			node.put("group", i%4); //TODO correct group number
+			node.put("group", StorageTools.getCellAddress(id)); //TODO correct group number
 			nodeList.add(node);
 			indexMap.put(id, i);
 			i++;
@@ -176,11 +174,11 @@ public class FileUtilities {
 		
 		//Second Loop : create all edges
 		List<Object> edgeList = new ArrayList<Object>();
-		Iterator entries = connectionsMap.entrySet().iterator();
+		Iterator<Entry<Long, Map<Long, String>>> entries = connectionsMap.entrySet().iterator();
 		while (entries.hasNext()) {
-			Entry vertex = (Entry) entries.next();
-			Long vertexId = ((Entry<Long, Map<Long,String>>) vertex).getKey();
-			Map<Long,String> edges = ((Entry<Long, Map<Long,String>>) vertex).getValue(); //Edges
+			Entry<Long, Map<Long, String>> vertex = entries.next();
+			Long vertexId = vertex.getKey();
+			Map<Long,String> edges = vertex.getValue(); //Edges
 			for (Long edgeId : edges.keySet()){
 				Map<String, Object> edge = new HashMap<String, Object>();
 				edge.put("source", indexMap.get(vertexId));

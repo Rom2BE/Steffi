@@ -13,7 +13,9 @@ import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import org.infinispan.AdvancedCache;
 import org.infinispan.Cache;
+import org.infinispan.distribution.DistributionManager;
 import org.infinispan.remoting.transport.Address;
 import org.infinispan.remoting.transport.jgroups.JGroupsAddress;
 import org.infinispan.remoting.transport.jgroups.JGroupsTransport;
@@ -168,18 +170,20 @@ public class BasicConsole {
 			    }
 				System.out.println("There are " + edgeCounter/2 + " edges for " + vertexCounter + " vertices.");
 			} else if (command.equals("printConnections")) {
-				Map<Long,Map<Long,String>> connectionsMap = TestTools.getConnections();
+				//Print Vertices and Edges
+				command  = IOUtils.readLine("Max Cell ID: ");
+				Map<Long, Map<Long, String>> connectionsMap = TestTools.getConnections(Long.parseLong(command));
 				String result = "";
 				String connectedTo = "";
-				Iterator entries = connectionsMap.entrySet().iterator();
+				Iterator<Entry<Long, Map<Long, String>>> entries = connectionsMap.entrySet().iterator();
 				while (entries.hasNext()) {
 					result = "";
-					Entry vertex = (Entry) entries.next();
-					Long vertexId = ((Entry<Long, Map<Long,String>>) vertex).getKey();
-					Map<Long,String> edges = ((Entry<Long, Map<Long,String>>) vertex).getValue(); //Edges
+					Entry<Long, Map<Long, String>> vertexInfo = entries.next();
+					Long vertexID = vertexInfo.getKey();
+					Map<Long,String> edges = vertexInfo.getValue(); //Edges
 					
-					result += "Vertex " + vertexId + " : "
-							+ "\n\t - is stored @ " + StorageTools.getCellAddress(vertexId);
+					result += "Vertex " + vertexID + " : "
+							+ "\n\t - is stored @ " + StorageTools.getCellAddress(vertexID);
 					if (edges.size()>0){
 						result += "\n\t - is connected to [";
 						connectedTo = "";
@@ -193,6 +197,7 @@ public class BasicConsole {
 					}
 					System.out.println(result+connectedTo);	
 				}
+				//Print Machines
 				int i = 1;
 				for (Address address : CacheContainer.getCacheContainer().getTransport().getMembers()){
 					System.out.println("Machine "+i+"'s Address : "+ address.toString()+", IpAddress : "+StorageTools.getIpAddress(address));
@@ -405,7 +410,6 @@ public class BasicConsole {
 
 					Map<String, Integer> cellCount = StorageTools.countCellsInCluster();
 					long totalCount = 0;
-					//TODO Incorrect method for cell counting (only count on the local machine)
 					for (Entry<String, Integer> entry : cellCount.entrySet()) {
 						System.out.println("Machine " + entry.getKey() + ": " + entry.getValue() + " cells");
 						totalCount += entry.getValue();
@@ -414,7 +418,7 @@ public class BasicConsole {
 				} catch (Exception ex) {
 					ex.printStackTrace();
 				}
-			} else if (command.equals("genEdges")) { //Generate Undirected Edges
+			} else if (command.equals("genEdges")) {
 				try {	
 					long numEdges = Long.parseLong(IOUtils.readLine("Number of edges: "));
 					long minId = Long.parseLong(IOUtils.readLine("Minimum start vertex id: "));
@@ -427,7 +431,6 @@ public class BasicConsole {
 			} else if (command.equals("getCellLocation")) {
 				command  = IOUtils.readLine("Cell ID: ");
 				System.out.println(StorageTools.getCellAddress(Long.parseLong(command)));
-				
 			} else if (command.equals("resetCounter")) {
 				nodeServer.resetCounters();
 			} else if (command.equals("searchMsgCounter")) {
@@ -443,7 +446,8 @@ public class BasicConsole {
 				}
 			} else if (command.equals("saveD3")) {
 				try {
-					FileUtilities.writeD3ToFile("../data/visu.json");
+					command  = IOUtils.readLine("Max Cell ID: ");
+					FileUtilities.writeD3ToFile("../data/visu.json", Long.parseLong(command));
 					System.out.println("OK");
 				} catch (IOException e) {
 					e.printStackTrace();

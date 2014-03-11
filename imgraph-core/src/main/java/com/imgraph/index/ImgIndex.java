@@ -9,7 +9,6 @@ import com.imgraph.storage.IndexOperation;
  * @param <T> Class of the elements to be indexed, it can be ImgVertex or ImgEdge
  */
 public interface ImgIndex<T extends Cell> {
-	
 	 String getName();
 	 Class<T> getEntityType();
 	 ImgIndexHits<T> get( String key, Object value );

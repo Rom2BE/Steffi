@@ -72,7 +72,6 @@ public class ImgGraph implements Serializable {
 	}
 	
 	
-	
 	private ImgGraph() {
 		context = ZMQ.context(1);
 
@@ -345,7 +344,7 @@ public class ImgGraph implements Serializable {
 	
 	public Iterable<Long> getCellIds() {
 		Cache<Long, Cell> cellCache = CacheContainer.getCellCache();
-		System.out.println(cellCache.size());
+		System.out.println("Cache size : " + cellCache.size());
 		List<Long> result = new ArrayList<Long>();
 		
 		for (Cell cell : cellCache.values()){
@@ -355,7 +354,7 @@ public class ImgGraph implements Serializable {
 		return result;
 	}
 	
-	
+	//TODO
 	public Iterable<ImgVertex> getVertices() {
 		throw new UnsupportedOperationException();
 	}

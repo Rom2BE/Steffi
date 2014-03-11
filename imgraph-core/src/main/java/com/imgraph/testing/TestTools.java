@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -219,35 +220,32 @@ public class TestTools {
 		Random randomGen = new Random();
 		graph.registerItemName("Friend");
 		
-		Cache<Long, Cell> cellCache = CacheContainer.getCellCache();
-		
-		//Count the number of vertex in the range
-		long vertexCounter = 0;
-		for (Cell cell : cellCache.values()){
-			if (cell.getCellType().equals(CellType.VERTEX)){
-				if (cell.getId() >= minId && cell.getId() < maxId)
-					vertexCounter++;
-			}
-		}
+		Map<Long, Map<Long, String>> connectionMapCounter = getConnections(maxId-1);
+		//TODO incorrect if special range : Count the number of vertex in the range
+		int vertexCounter = connectionMapCounter.size();	
 		System.out.println(vertexCounter + " vertices found in the range ["+minId+","+(maxId-1)+"]");
+		
+		//TODO
 		while(i<numEdges){
 			if(!allFull){
-				cellCache = CacheContainer.getCellCache();
+				Map<Long, Map<Long, String>> connectionMap = getConnections(maxId-1);
 				//Find Start Vertex
 				do{
 					fullEdges = false;
 					allFull = true;
 					idV1 = nextLong(randomGen, maxId - minId) + minId;
-					for (Cell cell : cellCache.values()){
-						if (cell.getCellType().equals(CellType.VERTEX)){ 
-							if (((ImgVertex) cell).getEdges().size() == vertexCounter-1){
-								if (cell.getId() == idV1){
-									fullEdges=true;
-								}
+					Iterator<Entry<Long, Map<Long, String>>> entries = connectionMap.entrySet().iterator();
+					while (entries.hasNext()) {
+						Entry<Long, Map<Long, String>> vertexInfo = entries.next();
+						Long vertexID = vertexInfo.getKey();
+						Map<Long,String> edges = vertexInfo.getValue(); //Edges
+						if (edges.size() == vertexCounter-1){
+							if (vertexID == idV1){
+								fullEdges=true;
 							}
-							else if(cell.getId() >= minId && cell.getId() < maxId)
-								allFull = false;
 						}
+						else if(vertexID >= minId && vertexID < maxId)
+							allFull = false;
 					}
 				}while((graph.getVertex(idV1) == null || fullEdges) && !allFull);
 				if(!allFull){
@@ -256,9 +254,12 @@ public class TestTools {
 						fullEdges = false;
 						edgeAlreadyExist=false;
 						idV2 = nextLong(randomGen, maxId - minId) + minId;
-						for (Cell cell : cellCache.values()){
-							if (cell.getCellType().equals(CellType.VERTEX) && cell.getId()==idV1){
-								for(ImgEdge edge : ((ImgVertex) cell).getEdges()){
+						Iterator<Entry<Long, Map<Long, String>>> entries = connectionMap.entrySet().iterator();
+						while (entries.hasNext()) {
+							Entry<Long, Map<Long, String>> vertexInfo = entries.next();
+							Long vertexID = vertexInfo.getKey();
+							if (vertexID==idV1){
+								for(ImgEdge edge : ((ImgVertex) graph.getRawGraph().retrieveCell(vertexID)).getEdges()){
 									if (edge.getDestCellId()==idV2)
 										edgeAlreadyExist = true;
 								}
@@ -279,10 +280,13 @@ public class TestTools {
 		}
 		if (allFull){
 			long edgeCounter = 0;
-			cellCache = CacheContainer.getCellCache();
-			for (Cell cell : cellCache.values()){
-				if (cell.getCellType().equals(CellType.VERTEX) && cell.getId() >= minId && cell.getId() < maxId){
-					for(ImgEdge edge : ((ImgVertex) cell).getEdges()){
+			Map<Long, Map<Long, String>> connectionMap = getConnections(maxId-1);
+			Iterator<Entry<Long, Map<Long, String>>> entries = connectionMap.entrySet().iterator();
+			while (entries.hasNext()) {
+				Entry<Long, Map<Long, String>> vertexInfo = entries.next();
+				Long vertexID = vertexInfo.getKey();
+				if (vertexID >= minId && vertexID < maxId){
+					for(ImgEdge edge : ((ImgVertex) graph.getRawGraph().retrieveCell(vertexID)).getEdges()){
 						edgeCounter++;
 					}
 				}
@@ -297,7 +301,7 @@ public class TestTools {
 	 *		* the name of the machine where the dest vertex is stored
 	 * result Map<VertexID, Map<DestVertexID, MachineName>>
 	 */
-	
+	/* Only works for local information
 	public static Map<Long, Map<Long, String>> getConnections(){
 		Map<Long,Map<Long,String>> resultMap = new TreeMap<Long,Map<Long,String>>();
 		Cache<Long, Cell> cellCache = CacheContainer.getCellCache();
@@ -312,6 +316,24 @@ public class TestTools {
 			}
 		}
 		
+		return resultMap;
+	}
+	*/
+	public static Map<Long, Map<Long, String>> getConnections(long maxID){
+		Map<Long,Map<Long,String>> resultMap = new TreeMap<Long,Map<Long,String>>();
+		
+		Long l;
+		ImgVertex v;
+		for(l=0L; l<=maxID; l++){
+			v = (ImgVertex) ImgraphGraph.getInstance().getRawGraph().retrieveCell(l);
+			if (v!=null){
+				Map<Long,String> connectionMap = new TreeMap<Long,String>();
+				for(ImgEdge edge : v.getEdges()){
+					connectionMap.put(edge.getDestCellId(), StorageTools.getCellAddress(edge.getDestCellId()));
+				}
+				resultMap.put(v.getId(), connectionMap);
+			}
+		}
 		return resultMap;
 	}
 	

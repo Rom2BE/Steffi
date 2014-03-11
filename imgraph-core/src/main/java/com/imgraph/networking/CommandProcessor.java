@@ -80,11 +80,13 @@ public abstract class CommandProcessor {
 	
 	public static void processAddressVertexRequest(Socket socket, AddressVertexReqMsg reqMsg) throws IOException {
 		AddressVertexRepMsg response = new AddressVertexRepMsg();
-		
-		for (Long cellId : reqMsg.getCellIds())
-			response.getCellAddresses().put(cellId, StorageTools.getCellAddress(cellId));
-		
-		socket.send(Message.convertMessageToBytes(response), 0);
+		if(reqMsg != null){
+			for (Long cellId : reqMsg.getCellIds())
+				response.getCellAddresses().put(cellId, StorageTools.getCellAddress(cellId));
+			socket.send(Message.convertMessageToBytes(response), 0);
+		}
+		else
+			System.out.println("No Vertex found");
 	}
 	
 	public static void processCellNumberRequest(Socket socket) throws IOException {

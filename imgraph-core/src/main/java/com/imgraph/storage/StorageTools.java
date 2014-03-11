@@ -19,6 +19,8 @@ import org.zeromq.ZMQ;
 
 import com.imgraph.common.Configuration;
 import com.imgraph.model.ImgGraph;
+import com.imgraph.networking.messages.AddressVertexRepMsg;
+import com.imgraph.networking.messages.AddressVertexReqMsg;
 import com.imgraph.networking.messages.Message;
 import com.imgraph.networking.messages.MessageType;
 
@@ -50,7 +52,6 @@ public abstract class StorageTools {
 		String ipAddressHost = null;
 		JGroupsAddress jgAddress = (JGroupsAddress) address;
 		
-		
 		Channel channel = ((JGroupsTransport)CacheContainer.getCacheContainer().getTransport()).getChannel();
 		
 		PhysicalAddress physicalAddr = (PhysicalAddress)channel.down(new Event(Event.GET_PHYSICAL_ADDRESS, 
@@ -62,9 +63,7 @@ public abstract class StorageTools {
         }
 		
 		return ipAddressHost;
-		
 	}
-	
 	
 	public static Map<String, Integer> countCellsInCluster() throws IOException {
 		Map<String, Integer> results = new HashMap<String, Integer>();
@@ -88,6 +87,38 @@ public abstract class StorageTools {
 				Message response = Message.readFromBytes(socket.recv(0)); 
 				
 				results.put(entry.getKey(), Integer.parseInt(response.getBody()));
+				
+				socket.close();
+			}
+		} finally {
+			if (socket !=null)
+				socket.close();
+		}		
+		return results;
+	}
+	
+	public static Map<String, Map<Long, String>> VertexAdressInCluster() throws IOException {
+		Map<String, Map<Long, String>> results = new HashMap<String, Map<Long, String>>();
+		ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
+		Random random =  new Random();
+		ZMQ.Socket socket = null;
+		String localAddress = CacheContainer.getCellCache().getCacheManager().getAddress().toString();
+		Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
+		
+		try {
+			for (Entry<String, String> entry : clusterAddresses.entrySet()) {
+				socket = context.socket(ZMQ.REQ);
+				socket.setIdentity(("cellCounter_" + localAddress + "_" + random.nextInt() + "_" + 
+						entry.getValue()).getBytes());
+				
+				socket.connect("tcp://" + entry.getValue() + ":" + 
+						Configuration.getProperty(Configuration.Key.NODE_PORT));
+			
+				socket.send(Message.convertMessageToBytes(new AddressVertexReqMsg()), 0);
+				
+				Message response = Message.readFromBytes(socket.recv(0)); 
+				
+				results.put(entry.getKey(), ((AddressVertexRepMsg) response).getCellAddresses());
 				
 				socket.close();
 			}

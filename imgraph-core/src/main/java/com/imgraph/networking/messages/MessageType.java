@@ -35,9 +35,4 @@ public enum MessageType  {
 	NUMBER_OF_CELLS_REP,
 	UPD_2HN_TRANSACTION_REQ,
 	UPD_2HN_TRANSACTION_REP;
-	
-	
-	
 }
-
-

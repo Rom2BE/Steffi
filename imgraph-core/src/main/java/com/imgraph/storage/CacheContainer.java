@@ -58,9 +58,12 @@ public class CacheContainer {
 		return cache;
 	}
 	
-	public static <K, V> Cache<K, V> getCellCache() {
-		
+	public static <K, V> Cache<K, V> getCellCache() {	
 		return CACHE_MANAGER.getCache(CELL_CACHE_NAME);
+	}
+	
+	public static <K, V> Cache<K, V> getVertexCache() {	
+		return CACHE_MANAGER.getCache(VERTEX_INDEX_CACHE_NAME);
 	}
 	
 	public static <K, V, T> Cache <K,V> createIndexCache(String indexName, Class<T> className) {

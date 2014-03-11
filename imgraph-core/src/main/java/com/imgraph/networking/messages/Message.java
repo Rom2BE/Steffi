@@ -24,18 +24,11 @@ public class Message implements Serializable {
 	protected String body;
 	
 	private static final int BUFFER_SIZE = 1024*1024*10;
-	
-	
-	
+		
 	public void setType(MessageType type) {
 		this.type = type;
 	}
 
-
-
-
-
-	
 	public Message(MessageType type) {
 		this.type = type;
 	
@@ -50,9 +43,6 @@ public class Message implements Serializable {
 	public String getBody() {
 		return body;
 	}
-
-
-
 
 	public void setBody(String body) {
 		this.body = body;

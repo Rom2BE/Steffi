@@ -72,10 +72,6 @@ public class LoadWorker implements Runnable {
 					
 					worker.send(Message.convertMessageToBytes(response), 0);
 				}
-		
-			
-				
-			
 			}
 		} catch (Exception ie) {
 			if (alive)
@@ -83,8 +79,5 @@ public class LoadWorker implements Runnable {
 		} finally {
 			worker.close();
 		}
-
-
 	}
-
 }

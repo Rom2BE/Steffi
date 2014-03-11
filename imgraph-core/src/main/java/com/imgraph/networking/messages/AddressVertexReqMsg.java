@@ -1,5 +1,6 @@
 package com.imgraph.networking.messages;
 
+import java.util.HashMap;
 import java.util.List;
 
 
