@@ -44,6 +44,8 @@ import com.imgraph.networking.NodeServer;
 import com.imgraph.networking.messages.AddressVertexRepMsg;
 import com.imgraph.networking.messages.AddressVertexReqMsg;
 import com.imgraph.networking.messages.LoadMessage;
+import com.imgraph.networking.messages.LocalVertexIdRepMsg;
+import com.imgraph.networking.messages.LocalVertexIdReqMsg;
 import com.imgraph.networking.messages.MessageType;
 import com.imgraph.networking.messages.LoadMessage.LoadFileType;
 import com.imgraph.networking.messages.Message;
@@ -466,6 +468,36 @@ public class BasicConsole {
 						
 						for (Entry<Long, String> e : results.entrySet()){
 							System.out.println(e.getKey() + " : " + e.getValue());
+						}
+
+						socket.close();
+					}
+				}finally {
+					if (socket !=null)
+						socket.close();
+				}
+			} else if (command.equals("getLVI")) { //TODO LocalVertexIds
+				Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
+				ZMQ.Socket socket = null;
+				ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
+				
+				try {
+					for (Entry<String, String> entry : clusterAddresses.entrySet()) {
+						socket = context.socket(ZMQ.REQ);
+						
+						socket.connect("tcp://" + entry.getValue() + ":" + 
+								Configuration.getProperty(Configuration.Key.NODE_PORT));
+					
+						LocalVertexIdReqMsg message = new LocalVertexIdReqMsg();
+						
+						socket.send(Message.convertMessageToBytes(message), 0);
+						
+						LocalVertexIdRepMsg response = (LocalVertexIdRepMsg) Message.readFromBytes(socket.recv(0));
+						
+						List<Long> results = response.getCellIds();
+						
+						for (Long id : results){
+							System.out.println(id + " : " + entry.getKey());
 						}
 
 						socket.close();

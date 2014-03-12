@@ -6,6 +6,7 @@ import org.zeromq.ZMQ.Socket;
 
 import com.imgraph.networking.messages.AddressVertexReqMsg;
 import com.imgraph.networking.messages.LocalNeighborsReqMsg;
+import com.imgraph.networking.messages.LocalVertexIdReqMsg;
 import com.imgraph.networking.messages.Message;
 import com.imgraph.networking.messages.Update2HNReqMsg;
 import com.imgraph.networking.messages.WriteFileReqMsg;
@@ -60,6 +61,9 @@ public class CommandWorker implements Runnable {
 					break;
 				case ADDRESS_VERTEX_REQ: //SYNC
 					CommandProcessor.processAddressVertexRequest(worker, (AddressVertexReqMsg) message);
+					break;
+				case LOCAL_VERTEX_ID_REQ: //SYNC
+					CommandProcessor.processLocalVertexIdRequest(worker, (LocalVertexIdReqMsg) message);
 					break;
 				case NUMBER_OF_CELLS_REQ: //SYNC
 					CommandProcessor.processCellNumberRequest(worker);

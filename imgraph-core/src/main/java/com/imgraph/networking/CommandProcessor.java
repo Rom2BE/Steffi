@@ -3,9 +3,13 @@ package com.imgraph.networking;
 import gnu.trove.procedure.TLongProcedure;
 
 import java.io.IOException;
+import java.util.List;
 
+import org.infinispan.Cache;
 import org.zeromq.ZMQ.Socket;
 
+import com.imgraph.model.Cell;
+import com.imgraph.model.CellType;
 import com.imgraph.model.ImgGraph;
 import com.imgraph.model.ImgIndexedEdges;
 import com.imgraph.model.ImgVertex;
@@ -15,6 +19,8 @@ import com.imgraph.networking.messages.ClusterAddressesRep;
 import com.imgraph.networking.messages.IdentifiableMessage;
 import com.imgraph.networking.messages.LocalNeighborsRepMsg;
 import com.imgraph.networking.messages.LocalNeighborsReqMsg;
+import com.imgraph.networking.messages.LocalVertexIdRepMsg;
+import com.imgraph.networking.messages.LocalVertexIdReqMsg;
 import com.imgraph.networking.messages.Message;
 import com.imgraph.networking.messages.MessageType;
 import com.imgraph.networking.messages.Update2HNReqMsg;
@@ -80,6 +86,24 @@ public abstract class CommandProcessor {
 		if(reqMsg != null){
 			for (Long cellId : reqMsg.getCellIds())
 				response.getCellAddresses().put(cellId, StorageTools.getCellAddress(cellId));
+			socket.send(Message.convertMessageToBytes(response), 0);
+		}
+		else
+			System.out.println("No Vertex found");
+	}
+	
+	public static void processLocalVertexIdRequest(Socket socket, LocalVertexIdReqMsg reqMsg) throws IOException {
+		LocalVertexIdRepMsg response = new LocalVertexIdRepMsg();
+		List<Long> list = response.getCellIds();
+		if(reqMsg != null){
+//			for (Long cellId : reqMsg.getCellIds())
+//				response.getCellAddresses().put(cellId, StorageTools.getCellAddress(cellId));
+			Cache<Long, Cell> cellCache = CacheContainer.getCellCache();
+			for (Cell cell : cellCache.values()){
+				if (cell.getCellType().equals(CellType.VERTEX))
+					list.add(cell.getId());
+			}
+			response.setCellIds(list);
 			socket.send(Message.convertMessageToBytes(response), 0);
 		}
 		else
