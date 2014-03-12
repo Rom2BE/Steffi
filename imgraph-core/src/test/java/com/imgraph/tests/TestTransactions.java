@@ -144,7 +144,6 @@ public class TestTransactions extends BaseLocalTest{
 		}
 	}
 	
-	
 	private void testIsolationChangesApplied(ImgVertex v1, ImgVertex v100, ImgVertex v102) {
 		
 		Assert.assertNotNull(v1);

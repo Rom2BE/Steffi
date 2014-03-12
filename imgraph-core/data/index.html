@@ -20,13 +20,29 @@
 var width = 650,
     height = 700;
 
-var color = d3.scale.category20();
+//nodes of the same group are together
+var angle = 2*Math.PI/4;
+var intensity = 200;
+
+var color = d3.scale.category10();
 
 var force = d3.layout.force()
     .charge(-120)
     .linkDistance(30)
     .size([width, height]);
 
+String.prototype.hashCode = function(){
+    var hash = 0, i, char;
+    if (this.length == 0) return hash;
+    for (i = 0, l = this.length; i < l; i++) {
+        char  = this.charCodeAt(i);
+        hash  = ((hash<<5)-hash)+char;
+        hash |= 0; // Convert to 32bit integer
+    }
+    return hash;
+};
+
+//svg = vis, body=#chart
 var svg = d3.select("body").append("svg")
     .attr("width", width)
     .attr("height", height);
@@ -51,18 +67,40 @@ d3.json("visu.json", function(error, graph) {
       .style("fill", function(d) { return color(d.group); })
       .call(force.drag);
 
+  //Display node name when mouse on a node
   node.append("title")
       .text(function(d) { return d.name; });
 
+  //Where and how nodes are displayed
   force.on("tick", function() {
     link.attr("x1", function(d) { return d.source.x; })
         .attr("y1", function(d) { return d.source.y; })
         .attr("x2", function(d) { return d.target.x; })
         .attr("y2", function(d) { return d.target.y; });
 
-    node.attr("cx", function(d) { return d.x; })
-        .attr("cy", function(d) { return d.y; });
+    node.attr("cx", function(d) { return d.x + intensity*Math.cos(angle*(d.group.hashCode())%7); })
+        .attr("cy", function(d) { return d.y + intensity*Math.sin(angle*(d.group.hashCode())%7); });
   });
+
+  //Legend
+  var legend = svg.selectAll(".legend")
+      .data(color.domain())
+    .enter().append("g")
+      .attr("class", "legend")
+      .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+  legend.append("rect")
+      .attr("x", width - 18)
+      .attr("width", 18)
+      .attr("height", 18)
+      .style("fill", color);
+
+  legend.append("text")
+      .attr("x", width - 24)
+      .attr("y", 9)
+      .attr("dy", ".35em")
+      .style("text-anchor", "end")
+      .text(function(d) { return d; });
 });
 
 </script>

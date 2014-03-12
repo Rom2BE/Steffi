@@ -180,10 +180,11 @@ public class TestTools {
 		long i = 1;
 		long id, security = 0;
 		long securityLoop = minId-1;
+		
 		Vertex v = null;
 		Random randomGen = new Random();
 		ImgraphGraph graph = ImgraphGraph.getInstance();
-		
+		graph.registerItemName("Name");
 		while(i<numVertices+1){
 			do{
 				if(security > maxId){ //prevent infinite loop if wrong input ranges
@@ -200,7 +201,8 @@ public class TestTools {
 			security = 0;
 			securityLoop = minId-1;
 			graph.startTransaction();
-			graph.addVertex(id);
+			Vertex vertex = graph.addVertex(id);
+			vertex.setProperty("Name", "Vertex "+id);
 			graph.stopTransaction(Conclusion.SUCCESS);
 			i++;
 		}
@@ -221,7 +223,7 @@ public class TestTools {
 		graph.registerItemName("Friend");
 		
 		Map<Long, Map<Long, String>> connectionMapCounter = getConnections(maxId-1);
-		//TODO incorrect if special range : Count the number of vertex in the range
+		//TODO incorrect if special range, should take into account minId : Count the number of vertex in the range
 		int vertexCounter = connectionMapCounter.size();	
 		System.out.println(vertexCounter + " vertices found in the range ["+minId+","+(maxId-1)+"]");
 		
@@ -231,37 +233,43 @@ public class TestTools {
 				Map<Long, Map<Long, String>> connectionMap = getConnections(maxId-1);
 				//Find Start Vertex
 				do{
-					fullEdges = false;
-					allFull = true;
 					idV1 = nextLong(randomGen, maxId - minId) + minId;
-					Iterator<Entry<Long, Map<Long, String>>> entries = connectionMap.entrySet().iterator();
-					while (entries.hasNext()) {
-						Entry<Long, Map<Long, String>> vertexInfo = entries.next();
-						Long vertexID = vertexInfo.getKey();
-						Map<Long,String> edges = vertexInfo.getValue(); //Edges
-						if (edges.size() == vertexCounter-1){
-							if (vertexID == idV1){
-								fullEdges=true;
+					if(graph.getVertex(idV1) != null){
+						System.out.println("startID : " + idV1 + ", machine : " + StorageTools.getCellAddress(idV1));
+						fullEdges = false;
+						allFull = true;
+						Iterator<Entry<Long, Map<Long, String>>> entries = connectionMap.entrySet().iterator();
+						while (entries.hasNext()) {
+							Entry<Long, Map<Long, String>> vertexInfo = entries.next();
+							Long vertexID = vertexInfo.getKey();
+							Map<Long,String> edges = vertexInfo.getValue(); //Edges
+							if (edges.size() == vertexCounter-1){
+								if (vertexID == idV1){
+									fullEdges=true;
+								}
 							}
+							else if(vertexID >= minId && vertexID < maxId)
+								allFull = false;
 						}
-						else if(vertexID >= minId && vertexID < maxId)
-							allFull = false;
 					}
 				}while((graph.getVertex(idV1) == null || fullEdges) && !allFull);
 				if(!allFull){
 					//Find End Vertex			
 					do{
-						fullEdges = false;
-						edgeAlreadyExist=false;
 						idV2 = nextLong(randomGen, maxId - minId) + minId;
-						Iterator<Entry<Long, Map<Long, String>>> entries = connectionMap.entrySet().iterator();
-						while (entries.hasNext()) {
-							Entry<Long, Map<Long, String>> vertexInfo = entries.next();
-							Long vertexID = vertexInfo.getKey();
-							if (vertexID==idV1){
-								for(ImgEdge edge : ((ImgVertex) graph.getRawGraph().retrieveCell(vertexID)).getEdges()){
-									if (edge.getDestCellId()==idV2)
-										edgeAlreadyExist = true;
+						if(graph.getVertex(idV2) != null){
+							System.out.println("endID : " + idV2 + ", machine : " + StorageTools.getCellAddress(idV2));
+							fullEdges = false;
+							edgeAlreadyExist=false;
+							Iterator<Entry<Long, Map<Long, String>>> entries = connectionMap.entrySet().iterator();
+							while (entries.hasNext()) {
+								Entry<Long, Map<Long, String>> vertexInfo = entries.next();
+								Long vertexID = vertexInfo.getKey();
+								if (vertexID==idV1){
+									for(ImgEdge edge : ((ImgVertex) graph.getRawGraph().retrieveCell(vertexID)).getEdges()){
+										if (edge.getDestCellId()==idV2)
+											edgeAlreadyExist = true;
+									}
 								}
 							}
 						}
@@ -273,7 +281,7 @@ public class TestTools {
 					else
 						graph.addUndirectedEdge("", graph.getVertex(idV1), graph.getVertex(idV2), "Friend");
 					graph.stopTransaction(Conclusion.SUCCESS);
-					System.out.println(idV1 + " & " + idV2 + " are now Friends.");
+					System.out.println(idV1 + " & " + idV2 + " are now Friends.\n");
 				}
 			}
 			i++;
