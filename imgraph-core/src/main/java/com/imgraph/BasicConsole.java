@@ -5,6 +5,7 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +24,7 @@ import org.jgroups.Channel;
 import org.jgroups.Event;
 import org.jgroups.PhysicalAddress;
 import org.jgroups.stack.IpAddress;
+import org.zeromq.ZMQ;
 
 import com.imgraph.common.Configuration;
 import com.imgraph.common.IOUtils;
@@ -35,10 +37,14 @@ import com.imgraph.model.Cell;
 import com.imgraph.model.CellType;
 import com.imgraph.model.EdgeType;
 import com.imgraph.model.ImgEdge;
+import com.imgraph.model.ImgGraph;
 import com.imgraph.model.ImgVertex;
 import com.imgraph.networking.ClusterConfigManager;
 import com.imgraph.networking.NodeServer;
+import com.imgraph.networking.messages.AddressVertexRepMsg;
+import com.imgraph.networking.messages.AddressVertexReqMsg;
 import com.imgraph.networking.messages.LoadMessage;
+import com.imgraph.networking.messages.MessageType;
 import com.imgraph.networking.messages.LoadMessage.LoadFileType;
 import com.imgraph.networking.messages.Message;
 import com.imgraph.storage.CacheContainer;
@@ -428,7 +434,47 @@ public class BasicConsole {
 				} catch (Exception ex) {
 					ex.printStackTrace();
 				}
-			} else if (command.equals("getCellLocation")) {
+			} else if (command.equals("getAddressesVertex")) {
+				List<Long> vertexIds = new ArrayList<Long>();
+				vertexIds.add(1L);
+				vertexIds.add(2L);
+				vertexIds.add(3L);
+				vertexIds.add(4L);
+				
+				Random random =  new Random();
+				String localAddress = CacheContainer.getCellCache().getCacheManager().getAddress().toString();
+				Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
+				ZMQ.Socket socket = null;
+				ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
+				
+				try {
+					for (Entry<String, String> entry : clusterAddresses.entrySet()) {
+						socket = context.socket(ZMQ.REQ);
+						
+						socket.connect("tcp://" + entry.getValue() + ":" + 
+								Configuration.getProperty(Configuration.Key.NODE_PORT));
+					
+						AddressVertexReqMsg message = new AddressVertexReqMsg();
+						
+						message.setCellIds(vertexIds);
+						
+						socket.send(Message.convertMessageToBytes(message), 0);
+						
+						AddressVertexRepMsg response = (AddressVertexRepMsg) Message.readFromBytes(socket.recv(0));
+						
+						Map<Long, String> results = response.getCellAddresses();
+						
+						for (Entry<Long, String> e : results.entrySet()){
+							System.out.println(e.getKey() + " : " + e.getValue());
+						}
+
+						socket.close();
+					}
+				}finally {
+					if (socket !=null)
+						socket.close();
+				}
+			}else if (command.equals("getCellLocation")) {
 				command  = IOUtils.readLine("Cell ID: ");
 				System.out.println(StorageTools.getCellAddress(Long.parseLong(command)));
 			} else if (command.equals("resetCounter")) {

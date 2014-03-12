@@ -222,6 +222,92 @@ public class TestTools {
 		Random randomGen = new Random();
 		graph.registerItemName("Friend");
 		
+		Cache<Long, Cell> cellCache = CacheContainer.getCellCache();				
+		//Count the number of vertex in the range
+		long vertexCounter = 0;
+		for (Cell cell : cellCache.values()){
+			if (cell.getCellType().equals(CellType.VERTEX)){
+				if (cell.getId() >= minId && cell.getId() < maxId)
+					vertexCounter++;
+			}
+		}
+		System.out.println(vertexCounter + " vertices found in the range ["+minId+","+(maxId-1)+"]");
+		
+		//TODO
+		while(i<numEdges){
+			if(!allFull){
+				cellCache = CacheContainer.getCellCache();
+				//Find Start Vertex
+				do{
+					fullEdges = false;
+  					allFull = true;
+  					idV1 = nextLong(randomGen, maxId - minId) + minId;
+					for (Cell cell : cellCache.values()){
+						if (cell.getCellType().equals(CellType.VERTEX)){ 
+							if (((ImgVertex) cell).getEdges().size() == vertexCounter-1){
+								if (cell.getId() == idV1){
+									fullEdges=true;
+								}
+								else if(cell.getId() >= minId && cell.getId() < maxId)
+									allFull = false;
+							}
+						}
+					}
+				}while((graph.getVertex(idV1) == null || fullEdges) && !allFull);
+				if(!allFull){
+					//Find End Vertex			
+					do{
+						fullEdges = false;
+  						edgeAlreadyExist=false;	
+						idV2 = nextLong(randomGen, maxId - minId) + minId;
+						for (Cell cell : cellCache.values()){
+							if (cell.getCellType().equals(CellType.VERTEX) && cell.getId()==idV1){
+		 						for(ImgEdge edge : ((ImgVertex) cell).getEdges()){if (edge.getDestCellId()==idV2)
+										edgeAlreadyExist = true;
+								}
+							}
+						}
+					}while(graph.getVertex(idV2) == null || idV1 == idV2 || edgeAlreadyExist || fullEdges);
+					//Connect
+					graph.startTransaction();
+					if (directed)
+						graph.addEdge("", graph.getVertex(idV1), graph.getVertex(idV2), "Friend");
+					else
+						graph.addUndirectedEdge("", graph.getVertex(idV1), graph.getVertex(idV2), "Friend");
+					graph.stopTransaction(Conclusion.SUCCESS);
+					System.out.println(idV1 + " & " + idV2 + " are now Friends.\n");
+				}
+			}
+			i++;
+		}
+		if (allFull){
+			long edgeCounter = 0;
+			cellCache = CacheContainer.getCellCache();
+			for (Cell cell : cellCache.values()){
+				if (cell.getCellType().equals(CellType.VERTEX) && cell.getId() >= minId && cell.getId() < maxId){
+					for(ImgEdge edge : ((ImgVertex) cell).getEdges()){
+						edgeCounter++;
+					}
+				}
+			}
+			System.out.println("All possible edges (" + edgeCounter/2 + ") have been created for " + vertexCounter + " vertices.");
+		}
+	}
+	
+	/*
+	public static void genEdges(long minId, long maxId,
+			long numEdges, boolean directed) {
+		maxId++;
+		ImgraphGraph graph = ImgraphGraph.getInstance();
+		long i = 0;
+		long idV1 = 0;
+		long idV2 = 0;
+		boolean edgeAlreadyExist = false;
+		boolean fullEdges = false;
+		boolean allFull = false;
+		Random randomGen = new Random();
+		graph.registerItemName("Friend");
+		
 		Map<Long, Map<Long, String>> connectionMapCounter = getConnections(maxId-1);
 		//TODO incorrect if special range, should take into account minId : Count the number of vertex in the range
 		int vertexCounter = connectionMapCounter.size();	
@@ -302,6 +388,8 @@ public class TestTools {
 			System.out.println("All possible edges (" + edgeCounter/2 + ") have been created for " + vertexCounter + " vertices.");
 		}
 	}
+	*/
+	
 	
 	/*return a map containing for every vertices :
 	 * a map containing for every of its edges :
@@ -329,7 +417,6 @@ public class TestTools {
 	*/
 	public static Map<Long, Map<Long, String>> getConnections(long maxID){
 		Map<Long,Map<Long,String>> resultMap = new TreeMap<Long,Map<Long,String>>();
-		
 		Long l;
 		ImgVertex v;
 		for(l=0L; l<=maxID; l++){
