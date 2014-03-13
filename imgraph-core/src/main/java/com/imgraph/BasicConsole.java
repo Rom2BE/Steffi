@@ -428,7 +428,7 @@ public class BasicConsole {
 				}
 			} else if (command.equals("genEdges")) {
 				try {	
-					long numEdges = Long.parseLong(IOUtils.readLine("Number of edges: "));
+					int numEdges = Integer.parseInt(IOUtils.readLine("Number of edges: "));
 					long minId = Long.parseLong(IOUtils.readLine("Minimum start vertex id: "));
 					long maxId = Long.parseLong(IOUtils.readLine("Maximum end vertex id: "));
 					boolean directed = IOUtils.readLine("Directed (Y/N): ").equals("Y");
@@ -477,34 +477,12 @@ public class BasicConsole {
 						socket.close();
 				}
 			} else if (command.equals("getLVI")) { //TODO LocalVertexIds
-				Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
-				ZMQ.Socket socket = null;
-				ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
-				
-				try {
-					for (Entry<String, String> entry : clusterAddresses.entrySet()) {
-						socket = context.socket(ZMQ.REQ);
-						
-						socket.connect("tcp://" + entry.getValue() + ":" + 
-								Configuration.getProperty(Configuration.Key.NODE_PORT));
-					
-						LocalVertexIdReqMsg message = new LocalVertexIdReqMsg();
-						
-						socket.send(Message.convertMessageToBytes(message), 0);
-						
-						LocalVertexIdRepMsg response = (LocalVertexIdRepMsg) Message.readFromBytes(socket.recv(0));
-						
-						List<Long> results = response.getCellIds();
-						
-						for (Long id : results){
-							System.out.println(id + " : " + entry.getKey());
-						}
-
-						socket.close();
+				Map<String, List<Long>> cellIds = TestTools.getCellsID();
+				for(Entry<String, List<Long>> entry : cellIds.entrySet()){
+					System.out.println("Machine : " + entry.getKey());
+					for (Long id : entry.getValue()){
+						System.out.println("\t" + id);
 					}
-				}finally {
-					if (socket !=null)
-						socket.close();
 				}
 			}else if (command.equals("getCellLocation")) {
 				command  = IOUtils.readLine("Cell ID: ");
@@ -524,8 +502,15 @@ public class BasicConsole {
 				}
 			} else if (command.equals("saveD3")) {
 				try {
-					command  = IOUtils.readLine("Max Cell ID: ");
-					FileUtilities.writeD3ToFile("../data/visu.json", Long.parseLong(command));
+					Map<String, List<Long>> cellsIdMap = TestTools.getCellsID();
+					long maxID = 0;
+					for(Entry<String, List<Long>> entry : cellsIdMap.entrySet()){
+						for (Long id : entry.getValue()){
+							if(id>maxID)
+								maxID = id;
+						}
+					}
+					FileUtilities.writeD3ToFile("../data/visu.json", maxID);
 					System.out.println("OK");
 				} catch (IOException e) {
 					e.printStackTrace();

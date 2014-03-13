@@ -12,6 +12,7 @@ import com.imgraph.storage.CellTransaction;
 import com.imgraph.storage.CellTransactionThread;
 import com.imgraph.storage.EdgeAddressesUpdater;
 import com.imgraph.storage.StorageTools;
+import com.tinkerpop.blueprints.impls.imgraph.ImgraphGraph;
 
 /**
  * @author Aldemar Reynaga
@@ -77,7 +78,9 @@ public class ImgVertex extends Cell {
 	
 	public void addEdgeAddress(ImgEdge edge, String address) {
 		ImgIndexedEdges adrEdges;
-		
+		//TODO
+		//System.out.println("addEdgeAddress : \tedge : " + edge + ", \taddress : " + address);
+
 		int addressIndex = ImgGraph.getInstance().getMemberIndex(address);
 		
 		adrEdges = edgesAddresses[addressIndex];

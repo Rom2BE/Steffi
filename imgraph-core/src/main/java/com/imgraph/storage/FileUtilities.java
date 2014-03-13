@@ -157,6 +157,7 @@ public class FileUtilities {
 	public static void writeD3ToFile(String fileName, Long maxID) throws IOException {
 		ObjectMapper objectMapper = new ObjectMapper();
 		Map<String, Object> mapObject = new HashMap<String, Object>();
+	
 		Map<Long,Map<Long,String>> connectionsMap = TestTools.getConnections(maxID);
 		//First Loop : create all vertices using keySet()
 		Map<Long, Integer> indexMap = new HashMap<Long, Integer>();
@@ -165,7 +166,7 @@ public class FileUtilities {
 		for (Long id : connectionsMap.keySet()){
 			Map<String, Object> node = new HashMap<String, Object>();
 			node.put("name", "Vertex " + id);
-			node.put("group", StorageTools.getCellAddress(id)); //TODO correct group number
+			node.put("group", StorageTools.getCellAddress(id));
 			nodeList.add(node);
 			indexMap.put(id, i);
 			i++;
@@ -183,7 +184,7 @@ public class FileUtilities {
 				Map<String, Object> edge = new HashMap<String, Object>();
 				edge.put("source", indexMap.get(vertexId));
 				edge.put("target", indexMap.get(edgeId));
-				edge.put("value", 1); //TODO ?
+				edge.put("value", 1);
 				edgeList.add(edge);
 			}
 		}

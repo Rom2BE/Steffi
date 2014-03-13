@@ -153,6 +153,8 @@ public class ImgGraph implements Serializable {
 	}
 	
 	public int getMemberIndex(String address) {
+		//TODO
+		//System.out.println("getMemberIndex : " + address + "\t = " + getMemberIndexes().get(address) + "\t = " + getMemberIndexes().get(address));
 		return getMemberIndexes().get(address);
 	}
 	

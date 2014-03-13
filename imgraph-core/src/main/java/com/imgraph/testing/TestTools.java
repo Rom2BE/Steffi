@@ -3,6 +3,7 @@ package com.imgraph.testing;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -16,18 +17,24 @@ import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
 import java.util.Map.Entry;
+import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.infinispan.Cache;
+import org.zeromq.ZMQ;
 
 import com.imgraph.common.BigTextFile;
+import com.imgraph.common.Configuration;
 import com.imgraph.model.Cell;
 import com.imgraph.model.CellType;
 import com.imgraph.model.EdgeType;
 import com.imgraph.model.ImgEdge;
 import com.imgraph.model.ImgGraph;
 import com.imgraph.model.ImgVertex;
+import com.imgraph.networking.messages.LocalVertexIdRepMsg;
+import com.imgraph.networking.messages.LocalVertexIdReqMsg;
+import com.imgraph.networking.messages.Message;
 import com.imgraph.storage.CacheContainer;
 import com.imgraph.storage.CellSequence;
 import com.imgraph.storage.StorageTools;
@@ -67,7 +74,6 @@ public class TestTools {
 		} while (bits-val+(n-1) < 0L);
 		return val;
 	}
-
 	
 	
 	private static Long genPathTest(Random randomGen, Cache<Long, Cell> cache, 
@@ -208,188 +214,79 @@ public class TestTools {
 		}
 	}
 	
-	
 	public static void genEdges(long minId, long maxId,
-			long numEdges, boolean directed) {
-		maxId++;
+			int numEdges, boolean directed) {
 		ImgraphGraph graph = ImgraphGraph.getInstance();
-		long i = 0;
-		long idV1 = 0;
-		long idV2 = 0;
-		boolean edgeAlreadyExist = false;
-		boolean fullEdges = false;
-		boolean allFull = false;
-		Random randomGen = new Random();
 		graph.registerItemName("Friend");
+		long idV1 = 0; //Id of the first vertex
+		long idV2 = 0; //Id of the first vertex
+		boolean allFull = true; //Checking if all possible edges have already been created in the given range
+		boolean edgeAlreadyExist = false; //Checking if there is already an edge between V1 and V2
+		boolean fullEdges = false; //Checking if an vertex can create one more edge //TODO should only count edges of vertices in the range
+		ImgVertex vertex = null;
 		
-		Cache<Long, Cell> cellCache = CacheContainer.getCellCache();				
-		//Count the number of vertex in the range
-		long vertexCounter = 0;
-		for (Cell cell : cellCache.values()){
-			if (cell.getCellType().equals(CellType.VERTEX)){
-				if (cell.getId() >= minId && cell.getId() < maxId)
-					vertexCounter++;
+		//Get vertices ID -> stored in cellsId
+		//Check number of vertices found in the range [minId, maxId]
+		int range = 0;
+		Map<String, List<Long>> cellsIdMap = getCellsID();
+		List<Long> cellsId = new ArrayList<Long>();
+		
+		for(Entry<String, List<Long>> entry : cellsIdMap.entrySet()){
+			for (Long id : entry.getValue()){
+				if(id >= minId && id <= maxId){
+					range++;
+					cellsId.add(id);
+				}
 			}
 		}
-		System.out.println(vertexCounter + " vertices found in the range ["+minId+","+(maxId-1)+"]");
+		System.out.println(range + " vertices found in the range ["+minId+","+(maxId)+"]");
 		
-		//TODO
-		while(i<numEdges){
-			if(!allFull){
-				cellCache = CacheContainer.getCellCache();
-				//Find Start Vertex
+		//Creating numEdges edges
+		for(int i=0; i<numEdges; i++){
+			//Checking if all possible edges have already been created in the given range
+			for (Long id : cellsId){
+				if (((ImgVertex) graph.getRawGraph().retrieveCell(id)).getEdges().size() != range-1)
+					allFull = false;
+			}
+			if (!allFull) {
+				//Get source vertex
 				do{
 					fullEdges = false;
-  					allFull = true;
-  					idV1 = nextLong(randomGen, maxId - minId) + minId;
-					for (Cell cell : cellCache.values()){
-						if (cell.getCellType().equals(CellType.VERTEX)){ 
-							if (((ImgVertex) cell).getEdges().size() == vertexCounter-1){
-								if (cell.getId() == idV1){
-									fullEdges=true;
-								}
-								else if(cell.getId() >= minId && cell.getId() < maxId)
-									allFull = false;
-							}
+					idV1 = cellsId.get(new Random().nextInt(cellsId.size()));
+					if (((ImgVertex) graph.getRawGraph().retrieveCell(idV1)).getEdges().size() == range-1)
+						fullEdges=true;
+				}while (fullEdges);
+				
+				//Get destination vertex
+				do{		
+					fullEdges = false;
+					edgeAlreadyExist = false;
+					idV2 = cellsId.get(new Random().nextInt(cellsId.size()));
+					vertex = (ImgVertex) graph.getRawGraph().retrieveCell(idV2);
+					if (vertex.getEdges().size() == range-1)
+						fullEdges=true;
+					if (!fullEdges){
+						for(ImgEdge edge : vertex.getEdges()){
+							if (edge.getDestCellId()==idV1)
+								edgeAlreadyExist = true;
 						}
 					}
-				}while((graph.getVertex(idV1) == null || fullEdges) && !allFull);
-				if(!allFull){
-					//Find End Vertex			
-					do{
-						fullEdges = false;
-  						edgeAlreadyExist=false;	
-						idV2 = nextLong(randomGen, maxId - minId) + minId;
-						for (Cell cell : cellCache.values()){
-							if (cell.getCellType().equals(CellType.VERTEX) && cell.getId()==idV1){
-		 						for(ImgEdge edge : ((ImgVertex) cell).getEdges()){if (edge.getDestCellId()==idV2)
-										edgeAlreadyExist = true;
-								}
-							}
-						}
-					}while(graph.getVertex(idV2) == null || idV1 == idV2 || edgeAlreadyExist || fullEdges);
-					//Connect
-					graph.startTransaction();
-					if (directed)
-						graph.addEdge("", graph.getVertex(idV1), graph.getVertex(idV2), "Friend");
-					else
-						graph.addUndirectedEdge("", graph.getVertex(idV1), graph.getVertex(idV2), "Friend");
-					graph.stopTransaction(Conclusion.SUCCESS);
-					System.out.println(idV1 + " & " + idV2 + " are now Friends.\n");
-				}
+				}while(idV1 == idV2 || fullEdges || edgeAlreadyExist);
+				
+				//Add a new edge between these two edges.
+				
+				graph.startTransaction();
+				
+				((ImgVertex) graph.getRawGraph().retrieveCell(idV1)).addEdge(((ImgVertex) graph.getRawGraph().retrieveCell(idV2)), directed, "Friend");
+				
+				graph.commit();
+				System.out.println(idV1 + " & " + idV2 + " are now Friends.");
 			}
-			i++;
+			else
+				System.out.println("All possible edges have already been created.");
 		}
-		if (allFull){
-			long edgeCounter = 0;
-			cellCache = CacheContainer.getCellCache();
-			for (Cell cell : cellCache.values()){
-				if (cell.getCellType().equals(CellType.VERTEX) && cell.getId() >= minId && cell.getId() < maxId){
-					for(ImgEdge edge : ((ImgVertex) cell).getEdges()){
-						edgeCounter++;
-					}
-				}
-			}
-			System.out.println("All possible edges (" + edgeCounter/2 + ") have been created for " + vertexCounter + " vertices.");
-		}
-	}
-	
-	/*
-	public static void genEdges(long minId, long maxId,
-			long numEdges, boolean directed) {
-		maxId++;
-		ImgraphGraph graph = ImgraphGraph.getInstance();
-		long i = 0;
-		long idV1 = 0;
-		long idV2 = 0;
-		boolean edgeAlreadyExist = false;
-		boolean fullEdges = false;
-		boolean allFull = false;
-		Random randomGen = new Random();
-		graph.registerItemName("Friend");
 		
-		Map<Long, Map<Long, String>> connectionMapCounter = getConnections(maxId-1);
-		//TODO incorrect if special range, should take into account minId : Count the number of vertex in the range
-		int vertexCounter = connectionMapCounter.size();	
-		System.out.println(vertexCounter + " vertices found in the range ["+minId+","+(maxId-1)+"]");
-		
-		//TODO
-		while(i<numEdges){
-			if(!allFull){
-				Map<Long, Map<Long, String>> connectionMap = getConnections(maxId-1);
-				//Find Start Vertex
-				do{
-					idV1 = nextLong(randomGen, maxId - minId) + minId;
-					if(graph.getVertex(idV1) != null){
-						System.out.println("startID : " + idV1 + ", machine : " + StorageTools.getCellAddress(idV1));
-						fullEdges = false;
-						allFull = true;
-						Iterator<Entry<Long, Map<Long, String>>> entries = connectionMap.entrySet().iterator();
-						while (entries.hasNext()) {
-							Entry<Long, Map<Long, String>> vertexInfo = entries.next();
-							Long vertexID = vertexInfo.getKey();
-							Map<Long,String> edges = vertexInfo.getValue(); //Edges
-							if (edges.size() == vertexCounter-1){
-								if (vertexID == idV1){
-									fullEdges=true;
-								}
-							}
-							else if(vertexID >= minId && vertexID < maxId)
-								allFull = false;
-						}
-					}
-				}while((graph.getVertex(idV1) == null || fullEdges) && !allFull);
-				if(!allFull){
-					//Find End Vertex			
-					do{
-						idV2 = nextLong(randomGen, maxId - minId) + minId;
-						if(graph.getVertex(idV2) != null){
-							System.out.println("endID : " + idV2 + ", machine : " + StorageTools.getCellAddress(idV2));
-							fullEdges = false;
-							edgeAlreadyExist=false;
-							Iterator<Entry<Long, Map<Long, String>>> entries = connectionMap.entrySet().iterator();
-							while (entries.hasNext()) {
-								Entry<Long, Map<Long, String>> vertexInfo = entries.next();
-								Long vertexID = vertexInfo.getKey();
-								if (vertexID==idV1){
-									for(ImgEdge edge : ((ImgVertex) graph.getRawGraph().retrieveCell(vertexID)).getEdges()){
-										if (edge.getDestCellId()==idV2)
-											edgeAlreadyExist = true;
-									}
-								}
-							}
-						}
-					}while(graph.getVertex(idV2) == null || idV1 == idV2 || edgeAlreadyExist || fullEdges);
-					//Connect
-					graph.startTransaction();
-					if (directed)
-						graph.addEdge("", graph.getVertex(idV1), graph.getVertex(idV2), "Friend");
-					else
-						graph.addUndirectedEdge("", graph.getVertex(idV1), graph.getVertex(idV2), "Friend");
-					graph.stopTransaction(Conclusion.SUCCESS);
-					System.out.println(idV1 + " & " + idV2 + " are now Friends.\n");
-				}
-			}
-			i++;
-		}
-		if (allFull){
-			long edgeCounter = 0;
-			Map<Long, Map<Long, String>> connectionMap = getConnections(maxId-1);
-			Iterator<Entry<Long, Map<Long, String>>> entries = connectionMap.entrySet().iterator();
-			while (entries.hasNext()) {
-				Entry<Long, Map<Long, String>> vertexInfo = entries.next();
-				Long vertexID = vertexInfo.getKey();
-				if (vertexID >= minId && vertexID < maxId){
-					for(ImgEdge edge : ((ImgVertex) graph.getRawGraph().retrieveCell(vertexID)).getEdges()){
-						edgeCounter++;
-					}
-				}
-			}
-			System.out.println("All possible edges (" + edgeCounter/2 + ") have been created for " + vertexCounter + " vertices.");
-		}
 	}
-	*/
-	
 	
 	/*return a map containing for every vertices :
 	 * a map containing for every of its edges :
@@ -430,6 +327,39 @@ public class TestTools {
 			}
 		}
 		return resultMap;
+	}
+	
+	public static Map<String, List<Long>> getCellsID(){
+		Map<String, List<Long>> result = new TreeMap<String, List<Long>>();
+		Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
+		ZMQ.Socket socket = null;
+		ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
+		
+		try {
+			for (Entry<String, String> entry : clusterAddresses.entrySet()) {
+				socket = context.socket(ZMQ.REQ);
+				
+				socket.connect("tcp://" + entry.getValue() + ":" + 
+						Configuration.getProperty(Configuration.Key.NODE_PORT));
+			
+				LocalVertexIdReqMsg message = new LocalVertexIdReqMsg();
+				
+				socket.send(Message.convertMessageToBytes(message), 0);
+				
+				LocalVertexIdRepMsg response = (LocalVertexIdRepMsg) Message.readFromBytes(socket.recv(0));
+				
+				List<Long> results = response.getCellIds();
+				
+				result.put(entry.getKey(), results);
+				socket.close();
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}finally {
+			if (socket !=null)
+				socket.close();
+		}
+		return result;
 	}
 	
 	private static void runTraversal(DistributedTraversal traversal, 

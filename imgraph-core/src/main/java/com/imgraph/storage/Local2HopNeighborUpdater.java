@@ -220,7 +220,6 @@ public class Local2HopNeighborUpdater implements ResponseProcessor {
 					int remoteAddressIndex = graph.getMemberIndex(StorageTools.getCellAddress(cellId));
 					Local2HopNeighborProcessor.addInvertedEdges(remoteAddressIndex, cellId, edgeMap);
 					
-					
 					return true;
 				}
 			});
