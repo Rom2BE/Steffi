@@ -388,13 +388,6 @@ public class BasicConsole {
 				} catch (Exception ex) {
 					ex.printStackTrace();
 				}
-			} else if (command.equals("genVertice")) {
-				try {					
-					long id = Long.parseLong(IOUtils.readLine("ID : "));
-					TestTools.genVertice(id);
-				} catch (Exception ex) {
-					ex.printStackTrace();
-				}
 			} else if (command.equals("genVertices")) {
 				try {					
 					long numVertices = Long.parseLong(IOUtils.readLine("Number of vertices: "));
@@ -463,6 +456,74 @@ public class BasicConsole {
 				}finally {
 					if (socket !=null)
 						socket.close();
+				}
+			} else if (command.equals("move")) { //TODO move
+				try {			
+					//Choose which node to move
+					long id = Long.parseLong(IOUtils.readLine("Vertex Id : "));	
+					//Print Machines
+					Map<String, Integer> indexMap = graph.getRawGraph().getMemberIndexes();
+					for(Entry<String, Integer> entry : indexMap.entrySet()){
+						System.out.println("Machine "+entry.getValue()+"'s Address : "+ entry.getKey());
+					}
+					//Choose on which machine to move
+					int index = Integer.parseInt(IOUtils.readLine("Machine index : "));
+					String machineName = "";
+					for (Entry<String, Integer> entry : indexMap.entrySet()){
+						if (entry.getValue() == index)
+							machineName=entry.getKey();
+					}
+					System.out.println("Vertex "+id+" will be moved to "+ machineName);
+					
+					//TODO save edges
+					List<ImgEdge> savedEdges = ((ImgVertex) ImgraphGraph.getInstance().getRawGraph().retrieveCell(id)).getEdges();
+					
+					//Remove the cell
+					graph.startTransaction();
+					((ImgVertex) ImgraphGraph.getInstance().getRawGraph().retrieveCell(id)).remove();
+					graph.stopTransaction(Conclusion.SUCCESS);
+					
+					//Find a free id on the target machine
+					long newId = 0;
+					List<Long> vertexIds = new ArrayList<Long>();
+					for (long l = 0; l < id*100; l++){//TODO increase id if no free id found
+						vertexIds.add(l);
+					}
+					
+					Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
+					ZMQ.Socket socket = null;
+					ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
+					
+					try {
+						socket = context.socket(ZMQ.REQ);
+						
+						socket.connect("tcp://" + clusterAddresses.values().toArray()[0] + ":" + 
+								Configuration.getProperty(Configuration.Key.NODE_PORT));
+					
+						AddressVertexReqMsg message = new AddressVertexReqMsg();
+						
+						message.setCellIds(vertexIds);
+						
+						socket.send(Message.convertMessageToBytes(message), 0);
+						
+						AddressVertexRepMsg response = (AddressVertexRepMsg) Message.readFromBytes(socket.recv(0));
+						
+						if(!machineName.equals("")){
+							for (Entry<Long, String> e : response.getCellAddresses().entrySet()){
+								if (newId == 0 && e.getValue().equals(machineName) && ImgraphGraph.getInstance().getRawGraph().retrieveCell(e.getKey())==null)
+									newId = e.getKey();
+							}
+						}
+						TestTools.genVertice(newId, savedEdges);
+						
+						socket.close();
+					}finally {
+						if (socket !=null)
+							socket.close();
+					}
+					
+				} catch (Exception ex) {
+					ex.printStackTrace();
 				}
 			} else if (command.equals("remove")) {
 				command  = IOUtils.readLine("Cell ID: ");

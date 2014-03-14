@@ -230,8 +230,8 @@ public class Local2HopNeighborUpdater implements ResponseProcessor {
 			
 			for (ImgEdge removedEdge : updateMsg.getRemovedEdges()) {
 				ImgIndexedEdges indexedEdges = Local2HopNeighbors.getNeighbors(removedEdge.getDestCellId());
-				
-				Collection<ImgEdge> edges = indexedEdges.getAllEdges();
+				//FIXME
+				Collection<ImgEdge> edges = indexedEdges.getAllEdges(); //TODO
 				
 				if (edges.size() <= 2) {
 					Local2HopNeighbors.removeNeighbors(removedEdge.getDestCellId());

@@ -42,6 +42,7 @@ import com.imgraph.traversal.MatchEvaluatorConf;
 import com.imgraph.traversal.Path;
 import com.imgraph.traversal.TraversalResults;
 import com.tinkerpop.blueprints.TransactionalGraph.Conclusion;
+import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.impls.imgraph.ImgraphGraph;
 
@@ -176,7 +177,7 @@ public class TestTools {
 		}
 	}
 	
-	public static void genVertice(long id){
+	public static void genVertice(long id, List<ImgEdge> edges){
 		ImgraphGraph graph = ImgraphGraph.getInstance();
 		graph.registerItemName("Name");
 
@@ -187,6 +188,11 @@ public class TestTools {
 			graph.stopTransaction(Conclusion.SUCCESS);
 			System.out.println("ID "+id+", stored @ " + StorageTools.getCellAddress(id));
 		}
+		
+		graph.startTransaction();
+		for(ImgEdge edge : edges)
+			((ImgVertex) graph.getRawGraph().retrieveCell(id)).addEdge(((ImgVertex) graph.getRawGraph().retrieveCell(edge.getDestCellId())), true, "Friend");
+		graph.commit();
 	}
 	
 	public static void genVertices(long minId, long maxId, long numVertices){
