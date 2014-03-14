@@ -3,20 +3,13 @@ package com.imgraph;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Map.Entry;
-import java.util.TreeMap;
-import java.util.TreeSet;
 
-import org.infinispan.AdvancedCache;
-import org.infinispan.Cache;
-import org.infinispan.distribution.DistributionManager;
 import org.infinispan.remoting.transport.Address;
 import org.infinispan.remoting.transport.jgroups.JGroupsAddress;
 import org.infinispan.remoting.transport.jgroups.JGroupsTransport;
@@ -33,8 +26,6 @@ import com.imgraph.index.ImgIndex;
 import com.imgraph.index.ImgIndexHits;
 import com.imgraph.loader.LoadVertexInfo;
 import com.imgraph.loader.TextFileLoader;
-import com.imgraph.model.Cell;
-import com.imgraph.model.CellType;
 import com.imgraph.model.EdgeType;
 import com.imgraph.model.ImgEdge;
 import com.imgraph.model.ImgGraph;
@@ -44,9 +35,6 @@ import com.imgraph.networking.NodeServer;
 import com.imgraph.networking.messages.AddressVertexRepMsg;
 import com.imgraph.networking.messages.AddressVertexReqMsg;
 import com.imgraph.networking.messages.LoadMessage;
-import com.imgraph.networking.messages.LocalVertexIdRepMsg;
-import com.imgraph.networking.messages.LocalVertexIdReqMsg;
-import com.imgraph.networking.messages.MessageType;
 import com.imgraph.networking.messages.LoadMessage.LoadFileType;
 import com.imgraph.networking.messages.Message;
 import com.imgraph.storage.CacheContainer;
@@ -78,7 +66,6 @@ import com.tinkerpop.blueprints.impls.imgraph.ImgraphVertex;
  * this console can be started using the parameter START_CONSOLE from the main JAR file 
  */
 public class BasicConsole {
-
 	
 	public static void runConsoleNoZeroMQ() throws Exception {
 		runConsole(false);
@@ -158,29 +145,18 @@ public class BasicConsole {
 				ImgVertex v = (ImgVertex) graph.getRawGraph().retrieveCell(Long.parseLong(vertexId));
 				
 				System.out.println(v);
-			} else if (command.equals("printGraph")) {
-				Map<Long,String> vertexMap = new TreeMap<Long,String>();				
-				long vertexCounter = 0;
-				long edgeCounter = 0;
-				Cache<Long, Cell> cellCache = CacheContainer.getCellCache();
-				for (Cell cell : cellCache.values()){
-					if (cell.getCellType().equals(CellType.VERTEX)){
-						vertexCounter++;
-						//System.out.println(cell);
-						for(ImgEdge edge : ((ImgVertex) cell).getEdges()){
-							edgeCounter++;
-						}
-						vertexMap.put(cell.getId(), cell.toString());
-					}
-				}
-				for(Map.Entry<Long,String> entry : vertexMap.entrySet()) {			    	
-			        System.out.println(entry.getValue());
-			    }
-				System.out.println("There are " + edgeCounter/2 + " edges for " + vertexCounter + " vertices.");
 			} else if (command.equals("printConnections")) {
 				//Print Vertices and Edges
-				command  = IOUtils.readLine("Max Cell ID: ");
-				Map<Long, Map<Long, String>> connectionsMap = TestTools.getConnections(Long.parseLong(command));
+				//TODO should be rewritten
+				Map<String, List<Long>> cellsIdMap = TestTools.getCellsID();
+				long maxID = 0;
+				for(Entry<String, List<Long>> entry : cellsIdMap.entrySet()){
+					for (Long id : entry.getValue()){
+						if(id>maxID)
+							maxID = id;
+					}
+				}
+				Map<Long, Map<Long, String>> connectionsMap = TestTools.getConnections(maxID);
 				String result = "";
 				String connectedTo = "";
 				Iterator<Entry<Long, Map<Long, String>>> entries = connectionsMap.entrySet().iterator();
@@ -212,23 +188,26 @@ public class BasicConsole {
 					i++;
 				}
 			} else if (command.equals("printPortals")) {
-				long vertexCounter = 0;
-				long portalCounter = 0;
-				Cache<Long, Cell> cellCache = CacheContainer.getCellCache();
-				for (Cell cell : cellCache.values()){
-					if (cell.getCellType().equals(CellType.VERTEX)){
-						vertexCounter++;
-						System.out.println(cell.getId());
-						for (Entry<String, Integer> memberEntry : graph.getRawGraph().getMemberIndexes().entrySet()) {
-							System.out.println("\n\t" + memberEntry.getKey() + ":");
-							if (((ImgVertex) cell).getEdges().size() > 0){
-								for(ImgEdge edge : ((ImgVertex) cell).getEdgesByAddress(memberEntry.getKey())){
-									System.out.println(edge);
-								}								
+				int vertexCounter = 0;
+				int portalCounter = 0;
+				boolean isPortal = false;
+				
+				Map<String, List<Long>> cellsIdMap = TestTools.getCellsID();
+				for (Entry<String, List<Long>> entry : cellsIdMap.entrySet()){
+					for (Long id : entry.getValue()){
+						isPortal = false;
+						for (ImgEdge edge : ((ImgVertex) graph.getRawGraph().retrieveCell(id)).getEdges()){
+							if (entry.getKey() != StorageTools.getCellAddress(edge.getDestCellId())){
+								isPortal = true;
+								System.out.println("ID : "+id+", Dest ID : "+edge.getDestCellId()+"stored @"+StorageTools.getCellAddress(edge.getDestCellId()));
 							}
 						}
+						if (isPortal)
+							portalCounter++;
 					}
+					vertexCounter += entry.getValue().size();
 				}
+				
 				System.out.println("There are " + portalCounter + " portal for " + vertexCounter + " vertices stored on "+graph.getRawGraph().getMemberIndexes().entrySet().size()+" machines.");
 			} else if (command.equals("2HN")) {
 				for (Long cellId : Local2HopNeighbors.getCellIds()) {
