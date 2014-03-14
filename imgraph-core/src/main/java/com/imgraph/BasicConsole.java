@@ -7,7 +7,6 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Map.Entry;
 
 import org.infinispan.remoting.transport.Address;
@@ -65,6 +64,7 @@ import com.tinkerpop.blueprints.impls.imgraph.ImgraphVertex;
  * Creates a basic text console conceived for the execution of tests on basic functionalities, 
  * this console can be started using the parameter START_CONSOLE from the main JAR file 
  */
+@SuppressWarnings("deprecation")
 public class BasicConsole {
 	
 	public static void runConsoleNoZeroMQ() throws Exception {
@@ -388,6 +388,13 @@ public class BasicConsole {
 				} catch (Exception ex) {
 					ex.printStackTrace();
 				}
+			} else if (command.equals("genVertice")) {
+				try {					
+					long id = Long.parseLong(IOUtils.readLine("ID : "));
+					TestTools.genVertice(id);
+				} catch (Exception ex) {
+					ex.printStackTrace();
+				}
 			} else if (command.equals("genVertices")) {
 				try {					
 					long numVertices = Long.parseLong(IOUtils.readLine("Number of vertices: "));
@@ -415,46 +422,54 @@ public class BasicConsole {
 				} catch (Exception ex) {
 					ex.printStackTrace();
 				}
-			} else if (command.equals("getAddressesVertex")) {
+			} else if (command.equals("getAV")) {//TODO getAddressesVertex
 				List<Long> vertexIds = new ArrayList<Long>();
 				vertexIds.add(1L);
 				vertexIds.add(2L);
 				vertexIds.add(3L);
 				vertexIds.add(4L);
+				vertexIds.add(5L);
+				vertexIds.add(6L);
+				vertexIds.add(7L);
+				vertexIds.add(8L);
+				vertexIds.add(9L);
+				vertexIds.add(10L);
 				
-				Random random =  new Random();
-				String localAddress = CacheContainer.getCellCache().getCacheManager().getAddress().toString();
 				Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
 				ZMQ.Socket socket = null;
 				ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
 				
 				try {
-					for (Entry<String, String> entry : clusterAddresses.entrySet()) {
-						socket = context.socket(ZMQ.REQ);
-						
-						socket.connect("tcp://" + entry.getValue() + ":" + 
-								Configuration.getProperty(Configuration.Key.NODE_PORT));
+					socket = context.socket(ZMQ.REQ);
 					
-						AddressVertexReqMsg message = new AddressVertexReqMsg();
-						
-						message.setCellIds(vertexIds);
-						
-						socket.send(Message.convertMessageToBytes(message), 0);
-						
-						AddressVertexRepMsg response = (AddressVertexRepMsg) Message.readFromBytes(socket.recv(0));
-						
-						Map<Long, String> results = response.getCellAddresses();
-						
-						for (Entry<Long, String> e : results.entrySet()){
-							System.out.println(e.getKey() + " : " + e.getValue());
-						}
-
-						socket.close();
+					socket.connect("tcp://" + clusterAddresses.values().toArray()[0] + ":" + 
+							Configuration.getProperty(Configuration.Key.NODE_PORT));
+				
+					AddressVertexReqMsg message = new AddressVertexReqMsg();
+					
+					message.setCellIds(vertexIds);
+					
+					socket.send(Message.convertMessageToBytes(message), 0);
+					
+					AddressVertexRepMsg response = (AddressVertexRepMsg) Message.readFromBytes(socket.recv(0));
+					
+					Map<Long, String> results = response.getCellAddresses();
+					
+					for (Entry<Long, String> e : results.entrySet()){
+						System.out.println(e.getKey() + " : " + e.getValue());
 					}
+
+					socket.close();
 				}finally {
 					if (socket !=null)
 						socket.close();
 				}
+			} else if (command.equals("remove")) {
+				command  = IOUtils.readLine("Cell ID: ");
+				
+				graph.startTransaction();
+				((ImgVertex) ImgraphGraph.getInstance().getRawGraph().retrieveCell(Long.parseLong(command))).remove();
+				graph.commit();
 			} else if (command.equals("getLVI")) { //TODO LocalVertexIds
 				Map<String, List<Long>> cellIds = TestTools.getCellsID();
 				for(Entry<String, List<Long>> entry : cellIds.entrySet()){

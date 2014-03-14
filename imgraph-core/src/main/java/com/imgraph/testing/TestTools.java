@@ -9,7 +9,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -17,7 +16,6 @@ import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
 import java.util.Map.Entry;
-import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -27,7 +25,6 @@ import org.zeromq.ZMQ;
 import com.imgraph.common.BigTextFile;
 import com.imgraph.common.Configuration;
 import com.imgraph.model.Cell;
-import com.imgraph.model.CellType;
 import com.imgraph.model.EdgeType;
 import com.imgraph.model.ImgEdge;
 import com.imgraph.model.ImgGraph;
@@ -36,7 +33,6 @@ import com.imgraph.networking.messages.LocalVertexIdRepMsg;
 import com.imgraph.networking.messages.LocalVertexIdReqMsg;
 import com.imgraph.networking.messages.Message;
 import com.imgraph.storage.CacheContainer;
-import com.imgraph.storage.CellSequence;
 import com.imgraph.storage.StorageTools;
 import com.imgraph.storage.CellTransaction.TransactionConclusion;
 import com.imgraph.traversal.DistributedTraversal;
@@ -45,17 +41,15 @@ import com.imgraph.traversal.Evaluation;
 import com.imgraph.traversal.MatchEvaluatorConf;
 import com.imgraph.traversal.Path;
 import com.imgraph.traversal.TraversalResults;
-import com.tinkerpop.blueprints.Edge;
-import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.TransactionalGraph.Conclusion;
-import com.tinkerpop.blueprints.impls.imgraph.ImgraphEdge;
+import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.impls.imgraph.ImgraphGraph;
-import com.tinkerpop.blueprints.impls.imgraph.ImgraphVertex;
 
 /**
  * @author Aldemar Reynaga
  * Functions to execute read, write and traversal tests
  */
+@SuppressWarnings("deprecation")
 public class TestTools {
 	
 	public enum TestFileType{
@@ -179,6 +173,19 @@ public class TestTools {
 				writer.flush();
 				writer.close();
 			}
+		}
+	}
+	
+	public static void genVertice(long id){
+		ImgraphGraph graph = ImgraphGraph.getInstance();
+		graph.registerItemName("Name");
+
+		if (graph.getRawGraph().retrieveCell(id) == null){
+			graph.startTransaction();
+			Vertex vertex = graph.addVertex(id);
+			vertex.setProperty("Name", "Vertex "+id);
+			graph.stopTransaction(Conclusion.SUCCESS);
+			System.out.println("ID "+id+", stored @ " + StorageTools.getCellAddress(id));
 		}
 	}
 	

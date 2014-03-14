@@ -125,6 +125,7 @@ public abstract class CommandProcessor {
 		System.out.println("processUpdate2HNRequest");
 		//TODO 
 		//FIXME ???????
+		//EdgeAddressesUpdater.call()
 		Map<String, List<Long>> cellsIdMap = TestTools.getCellsID();
 		
 		for(Entry<String, List<Long>> entry : cellsIdMap.entrySet()){
