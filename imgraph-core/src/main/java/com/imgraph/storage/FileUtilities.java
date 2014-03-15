@@ -155,6 +155,7 @@ public class FileUtilities {
 	}
 	
 	public static void writeD3ToFile(String fileName, Long maxID) throws IOException {
+		//TODO should be rewritten
 		ObjectMapper objectMapper = new ObjectMapper();
 		Map<String, Object> mapObject = new HashMap<String, Object>();
 	

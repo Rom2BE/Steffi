@@ -475,53 +475,58 @@ public class BasicConsole {
 					}
 					System.out.println("Vertex "+id+" will be moved to "+ machineName);
 					
-					//TODO save edges
-					List<ImgEdge> savedEdges = ((ImgVertex) ImgraphGraph.getInstance().getRawGraph().retrieveCell(id)).getEdges();
+					if(ImgraphGraph.getInstance().getRawGraph().retrieveCell(id) != null
+							&& !machineName.equals("")){
 					
-					//Remove the cell
-					graph.startTransaction();
-					((ImgVertex) ImgraphGraph.getInstance().getRawGraph().retrieveCell(id)).remove();
-					graph.stopTransaction(Conclusion.SUCCESS);
-					
-					//Find a free id on the target machine
-					long newId = 0;
-					List<Long> vertexIds = new ArrayList<Long>();
-					for (long l = 0; l < id*100; l++){//TODO increase id if no free id found
-						vertexIds.add(l);
-					}
-					
-					Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
-					ZMQ.Socket socket = null;
-					ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
-					
-					try {
-						socket = context.socket(ZMQ.REQ);
+						//Save edges
+						List<ImgEdge> savedEdges = ((ImgVertex) ImgraphGraph.getInstance().getRawGraph().retrieveCell(id)).getEdges();
 						
-						socket.connect("tcp://" + clusterAddresses.values().toArray()[0] + ":" + 
-								Configuration.getProperty(Configuration.Key.NODE_PORT));
-					
-						AddressVertexReqMsg message = new AddressVertexReqMsg();
+						//Remove the cell
+						graph.startTransaction();
+						((ImgVertex) ImgraphGraph.getInstance().getRawGraph().retrieveCell(id)).remove();
+						graph.stopTransaction(Conclusion.SUCCESS);
 						
-						message.setCellIds(vertexIds);
+						//Find a free id on the target machine
+						long newId = 0;
+						List<Long> vertexIds = new ArrayList<Long>();
+						for (long l = 0; l < id*100; l++){//TODO increase id if no free id found
+							vertexIds.add(l);
+						}
 						
-						socket.send(Message.convertMessageToBytes(message), 0);
+						Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
+						ZMQ.Socket socket = null;
+						ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
 						
-						AddressVertexRepMsg response = (AddressVertexRepMsg) Message.readFromBytes(socket.recv(0));
+						try {
+							socket = context.socket(ZMQ.REQ);
+							
+							socket.connect("tcp://" + clusterAddresses.values().toArray()[0] + ":" + 
+									Configuration.getProperty(Configuration.Key.NODE_PORT));
 						
-						if(!machineName.equals("")){
+							AddressVertexReqMsg message = new AddressVertexReqMsg();
+							
+							message.setCellIds(vertexIds);
+							
+							socket.send(Message.convertMessageToBytes(message), 0);
+							
+							AddressVertexRepMsg response = (AddressVertexRepMsg) Message.readFromBytes(socket.recv(0));
+							
 							for (Entry<Long, String> e : response.getCellAddresses().entrySet()){
 								if (newId == 0 && e.getValue().equals(machineName) && ImgraphGraph.getInstance().getRawGraph().retrieveCell(e.getKey())==null)
 									newId = e.getKey();
 							}
-						}
-						TestTools.genVertice(newId, savedEdges);
-						
-						socket.close();
-					}finally {
-						if (socket !=null)
+							
+							//Create the vertice with its edges on the target machine.
+							TestTools.genVertice(newId, savedEdges);
+							
 							socket.close();
+						}finally {
+							if (socket !=null)
+								socket.close();
+						}
 					}
-					
+					else 
+						System.out.println("Bad input");
 				} catch (Exception ex) {
 					ex.printStackTrace();
 				}
@@ -565,7 +570,7 @@ public class BasicConsole {
 								maxID = id;
 						}
 					}
-					FileUtilities.writeD3ToFile("../data/visu.json", maxID);
+					FileUtilities.writeD3ToFile("../data/data.json", maxID);
 					System.out.println("OK");
 				} catch (IOException e) {
 					e.printStackTrace();

@@ -133,6 +133,9 @@ public abstract class CommandProcessor {
 				ImgraphGraph.getInstance().getRawGraph().retrieveCell(id);
 			}
 		}
+		//FIXME
+		
+		
 		Local2HopNeighborUpdater.processUpdateRequest(update2HNReqMsg);
 		IdentifiableMessage response = new IdentifiableMessage(MessageType.UPD_2HN_TRANSACTION_REP);
 		response.setBody("OK");

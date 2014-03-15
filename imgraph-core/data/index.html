@@ -14,15 +14,11 @@
 
 </style>
 <body>
-<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="d3.v3.min.js"></script>
 <script>
 
 var width = 650,
     height = 700;
-
-//nodes of the same group are together
-var angle = 2*Math.PI/4;
-var intensity = 200;
 
 var color = d3.scale.category10();
 
@@ -31,23 +27,11 @@ var force = d3.layout.force()
     .linkDistance(30)
     .size([width, height]);
 
-String.prototype.hashCode = function(){
-    var hash = 0, i, char;
-    if (this.length == 0) return hash;
-    for (i = 0, l = this.length; i < l; i++) {
-        char  = this.charCodeAt(i);
-        hash  = ((hash<<5)-hash)+char;
-        hash |= 0; // Convert to 32bit integer
-    }
-    return hash;
-};
-
-//svg = vis, body=#chart
 var svg = d3.select("body").append("svg")
     .attr("width", width)
     .attr("height", height);
 
-d3.json("visu.json", function(error, graph) {
+d3.json("data.json", function(error, graph) {
   force
       .nodes(graph.nodes)
       .links(graph.links)
