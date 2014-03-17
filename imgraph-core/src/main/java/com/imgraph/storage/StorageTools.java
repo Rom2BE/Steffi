@@ -19,8 +19,6 @@ import org.zeromq.ZMQ;
 
 import com.imgraph.common.Configuration;
 import com.imgraph.model.ImgGraph;
-import com.imgraph.networking.messages.AddressVertexRepMsg;
-import com.imgraph.networking.messages.AddressVertexReqMsg;
 import com.imgraph.networking.messages.Message;
 import com.imgraph.networking.messages.MessageType;
 
@@ -34,11 +32,11 @@ public abstract class StorageTools {
 		DistributionManager dm = CacheContainer.getCellCache().getAdvancedCache().getDistributionManager();
 		return dm.getPrimaryLocation(cellId).toString();
 	}
-	
+	/*TODO
 	public static void members() {
 		DistributionManager dm = CacheContainer.getCellCache().getAdvancedCache().getDistributionManager();
 	}
-	
+	*/
 	public static Map<String, String> getAddressesIps() {
 		Map<String, String> result =  new HashMap<String, String>();
 		

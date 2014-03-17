@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
@@ -33,6 +32,7 @@ import com.tinkerpop.blueprints.impls.imgraph.ImgraphVertex;
  * @author Aldemar Reynaga
  * Text file functions used for the loading of files
  */
+@SuppressWarnings("deprecation")
 public class FileUtilities {
 	
 	
@@ -154,39 +154,49 @@ public class FileUtilities {
 		}
 	}
 	
-	public static void writeD3ToFile(String fileName, Long maxID) throws IOException {
-		//TODO should be rewritten
+	public static void writeD3ToFile(String fileName) throws IOException {
+		
 		ObjectMapper objectMapper = new ObjectMapper();
 		Map<String, Object> mapObject = new HashMap<String, Object>();
-	
-		Map<Long,Map<Long,String>> connectionsMap = TestTools.getConnections(maxID);
+		
+		Map<String, List<Long>> cellsIdMap = TestTools.getCellsID();
+		
+		/*
+		Map<Long,Map<Long,String>> connectionsMap = HashMap<Long,Map<Long,String>>()
+		for(ImgEdge edge : v.getEdges()){
+			connectionMap.put(edge.getDestCellId(), StorageTools.getCellAddress(edge.getDestCellId()));
+		}
+		*/
+		
+		//Map<Long,Map<Long,String>> connectionsMap = TestTools.getConnections(maxID);
 		//First Loop : create all vertices using keySet()
 		Map<Long, Integer> indexMap = new HashMap<Long, Integer>();
 		List<Object> nodeList = new ArrayList<Object>();
 		int i = 0;
-		for (Long id : connectionsMap.keySet()){
-			Map<String, Object> node = new HashMap<String, Object>();
-			node.put("name", "Vertex " + id);
-			node.put("group", StorageTools.getCellAddress(id));
-			nodeList.add(node);
-			indexMap.put(id, i);
-			i++;
+		for (Entry<String, List<Long>> entry : cellsIdMap.entrySet()){
+			for(long id : entry.getValue()){
+				Map<String, Object> node = new HashMap<String, Object>();
+				node.put("name", "Vertex " + id);
+				node.put("group", entry.getKey());
+				nodeList.add(node);
+				indexMap.put(id, i);
+				i++;
+			}
 		}
 		mapObject.put("nodes", nodeList);
 		
 		//Second Loop : create all edges
 		List<Object> edgeList = new ArrayList<Object>();
-		Iterator<Entry<Long, Map<Long, String>>> entries = connectionsMap.entrySet().iterator();
-		while (entries.hasNext()) {
-			Entry<Long, Map<Long, String>> vertex = entries.next();
-			Long vertexId = vertex.getKey();
-			Map<Long,String> edges = vertex.getValue(); //Edges
-			for (Long edgeId : edges.keySet()){
-				Map<String, Object> edge = new HashMap<String, Object>();
-				edge.put("source", indexMap.get(vertexId));
-				edge.put("target", indexMap.get(edgeId));
-				edge.put("value", 1);
-				edgeList.add(edge);
+		for (Entry<String, List<Long>> entry : cellsIdMap.entrySet()){
+			for(long id : entry.getValue()){
+				ImgVertex v = (ImgVertex) ImgraphGraph.getInstance().getRawGraph().retrieveCell(id);
+				for(ImgEdge edge : v.getEdges()){
+					Map<String, Object> e = new HashMap<String, Object>();
+					e.put("source", indexMap.get(id));
+					e.put("target", indexMap.get(edge.getDestCellId()));
+					e.put("value", 1);
+					edgeList.add(e);
+				}
 			}
 		}
 		mapObject.put("links", edgeList);
@@ -197,8 +207,6 @@ public class FileUtilities {
 			{
 			  Desktop.getDesktop().browse(new File("../data/index.html").toURI());
 			}
-			//file:///Users/romain/Dropbox/Master/Q2/Memoire/Code/Steffi/imgraph-core/data/index.html
-
 		} catch (JsonGenerationException e) {
 			e.printStackTrace();
 		} catch (JsonMappingException e) {

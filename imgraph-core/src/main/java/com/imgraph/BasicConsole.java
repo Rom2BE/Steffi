@@ -562,6 +562,7 @@ public class BasicConsole {
 				}
 			} else if (command.equals("saveD3")) {
 				try {
+					/*
 					Map<String, List<Long>> cellsIdMap = TestTools.getCellsID();
 					long maxID = 0;
 					for(Entry<String, List<Long>> entry : cellsIdMap.entrySet()){
@@ -571,6 +572,8 @@ public class BasicConsole {
 						}
 					}
 					FileUtilities.writeD3ToFile("../data/data.json", maxID);
+					*/
+					FileUtilities.writeD3ToFile("../data/data.json");
 					System.out.println("OK");
 				} catch (IOException e) {
 					e.printStackTrace();

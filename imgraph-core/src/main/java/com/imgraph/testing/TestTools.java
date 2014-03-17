@@ -42,7 +42,6 @@ import com.imgraph.traversal.MatchEvaluatorConf;
 import com.imgraph.traversal.Path;
 import com.imgraph.traversal.TraversalResults;
 import com.tinkerpop.blueprints.TransactionalGraph.Conclusion;
-import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.impls.imgraph.ImgraphGraph;
 
@@ -252,13 +251,22 @@ public class TestTools {
 				}
 			}
 		}
-		System.out.println(range + " vertices found in the range ["+minId+","+(maxId)+"]");
+		System.out.println(range + " vertices found in the range ["+minId+","+maxId+"]");
 		
 		//Creating numEdges edges
 		for(int i=0; i<numEdges; i++){
 			//Checking if all possible edges have already been created in the given range
+			//Should only check edges that are connected to nodes in the range : edgesInRange
+			allFull = true;
 			for (Long id : cellsId){
-				if (((ImgVertex) graph.getRawGraph().retrieveCell(id)).getEdges().size() != range-1)
+				int edgesInRange = 0;
+				for (ImgEdge edge : ((ImgVertex) graph.getRawGraph().retrieveCell(id)).getEdges()){
+					long destId = edge.getDestCellId();
+					if (destId >= minId && destId <= maxId){
+						edgesInRange++;
+					}
+				}
+				if (edgesInRange != range-1)
 					allFull = false;
 			}
 			if (!allFull) {
@@ -295,10 +303,9 @@ public class TestTools {
 				graph.commit();
 				System.out.println(idV1 + " & " + idV2 + " are now Friends.");
 			}
-			else
-				System.out.println("All possible edges have already been created.");
 		}
-		
+		if (allFull)
+			System.out.println("All possible edges ("+ (range*(range-1)/2) +") have already been created for the "+range+" vertices in the range ["+minId+","+(maxId)+"].");
 	}
 	
 	/*return a map containing for every vertices :
