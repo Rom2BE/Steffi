@@ -8,6 +8,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.TreeMap;
 
 import org.infinispan.remoting.transport.Address;
 import org.infinispan.remoting.transport.jgroups.JGroupsAddress;
@@ -193,13 +194,23 @@ public class BasicConsole {
 				boolean isPortal = false;
 				
 				Map<String, List<Long>> cellsIdMap = TestTools.getCellsID();
+				Map<Long, List<Long>> portalsMap = new TreeMap<Long, List<Long>>();
+				//Get Information and sort them
 				for (Entry<String, List<Long>> entry : cellsIdMap.entrySet()){
 					for (Long id : entry.getValue()){
 						isPortal = false;
 						for (ImgEdge edge : ((ImgVertex) graph.getRawGraph().retrieveCell(id)).getEdges()){
 							if (entry.getKey() != StorageTools.getCellAddress(edge.getDestCellId())){
 								isPortal = true;
-								System.out.println("ID : "+id+", Dest ID : "+edge.getDestCellId()+"stored @"+StorageTools.getCellAddress(edge.getDestCellId()));
+								List<Long> connectedList = null;
+								if (portalsMap.containsKey(id)){ //Is already connected to an other vertice
+									connectedList = portalsMap.get(id);
+								}
+								else{ //First connection found
+									connectedList = new ArrayList<Long>();
+								}
+								connectedList.add(edge.getDestCellId());
+								portalsMap.put(id, connectedList);
 							}
 						}
 						if (isPortal)
@@ -208,7 +219,15 @@ public class BasicConsole {
 					vertexCounter += entry.getValue().size();
 				}
 				
+				//Print sorted information (more comprehensive)
+				for (Entry<Long, List<Long>> entry : portalsMap.entrySet()){
+					System.out.println("Vertice "+entry.getKey()+", stored @ "+StorageTools.getCellAddress(entry.getKey())+" is connected to :");
+					for (Long id : entry.getValue())
+						System.out.println("\t - ID :" +id+", stored @ "+StorageTools.getCellAddress(id));
+				}
+				System.out.println("\n");
 				System.out.println("There are " + portalCounter + " portal for " + vertexCounter + " vertices stored on "+graph.getRawGraph().getMemberIndexes().entrySet().size()+" machines.");
+				System.out.println("\n");
 			} else if (command.equals("2HN")) {
 				for (Long cellId : Local2HopNeighbors.getCellIds()) {
 					System.out.println("Cell ID: " + cellId);

@@ -54,7 +54,7 @@ d3.json("data.json", function(error, graph) {
   //Display node name when mouse on a node
   node.append("title")
       .text(function(d) { return d.name; });
-
+  
   //Where and how nodes are displayed
   force.on("tick", function() {
     node.attr("cx", function(d) { return d.x; })

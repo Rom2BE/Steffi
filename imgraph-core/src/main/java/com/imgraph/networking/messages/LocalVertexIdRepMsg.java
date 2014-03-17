@@ -3,11 +3,12 @@ package com.imgraph.networking.messages;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * @author Romain Capron
+ * Answer containing a list with the cells Ids locally stored in that machine
+ */
 public class LocalVertexIdRepMsg extends Message {
 
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 6914506924928756246L;
 	private List<Long> cellIds;
 	

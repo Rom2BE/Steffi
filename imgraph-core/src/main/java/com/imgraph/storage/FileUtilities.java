@@ -155,20 +155,11 @@ public class FileUtilities {
 	}
 	
 	public static void writeD3ToFile(String fileName) throws IOException {
-		
 		ObjectMapper objectMapper = new ObjectMapper();
 		Map<String, Object> mapObject = new HashMap<String, Object>();
 		
 		Map<String, List<Long>> cellsIdMap = TestTools.getCellsID();
 		
-		/*
-		Map<Long,Map<Long,String>> connectionsMap = HashMap<Long,Map<Long,String>>()
-		for(ImgEdge edge : v.getEdges()){
-			connectionMap.put(edge.getDestCellId(), StorageTools.getCellAddress(edge.getDestCellId()));
-		}
-		*/
-		
-		//Map<Long,Map<Long,String>> connectionsMap = TestTools.getConnections(maxID);
 		//First Loop : create all vertices using keySet()
 		Map<Long, Integer> indexMap = new HashMap<Long, Integer>();
 		List<Object> nodeList = new ArrayList<Object>();

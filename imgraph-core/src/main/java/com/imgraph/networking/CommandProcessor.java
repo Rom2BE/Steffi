@@ -3,10 +3,7 @@ package com.imgraph.networking;
 import gnu.trove.procedure.TLongProcedure;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 
 import org.infinispan.Cache;
 import org.zeromq.ZMQ.Socket;
@@ -33,8 +30,6 @@ import com.imgraph.storage.ImgpFileTools;
 import com.imgraph.storage.Local2HopNeighborProcessor;
 import com.imgraph.storage.Local2HopNeighborUpdater;
 import com.imgraph.storage.StorageTools;
-import com.imgraph.testing.TestTools;
-import com.tinkerpop.blueprints.impls.imgraph.ImgraphGraph;
 
 /**
  * @author Aldemar Reynaga
@@ -123,19 +118,6 @@ public abstract class CommandProcessor {
 	
 	public static void processUpdate2HNRequest(Socket socket, Update2HNReqMsg update2HNReqMsg) throws IOException {
 		System.out.println("processUpdate2HNRequest");
-		//TODO 
-		//FIXME ???????
-		//EdgeAddressesUpdater.call()
-		Map<String, List<Long>> cellsIdMap = TestTools.getCellsID();
-		
-		for(Entry<String, List<Long>> entry : cellsIdMap.entrySet()){
-			for (Long id : entry.getValue()){
-				ImgraphGraph.getInstance().getRawGraph().retrieveCell(id);
-			}
-		}
-		//FIXME
-		
-		
 		Local2HopNeighborUpdater.processUpdateRequest(update2HNReqMsg);
 		IdentifiableMessage response = new IdentifiableMessage(MessageType.UPD_2HN_TRANSACTION_REP);
 		response.setBody("OK");

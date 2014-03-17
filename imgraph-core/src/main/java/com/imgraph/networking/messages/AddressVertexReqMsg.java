@@ -1,14 +1,13 @@
 package com.imgraph.networking.messages;
 
-import java.util.HashMap;
 import java.util.List;
 
-
+/**
+ * @author Romain Capron
+ * Asking for a list with the cells Ids locally stored in that machine
+ */
 public class AddressVertexReqMsg extends Message {
 	
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 1803465808643110411L;
 	private List<Long> cellIds;
 
@@ -27,8 +26,4 @@ public class AddressVertexReqMsg extends Message {
 	public AddressVertexReqMsg(String body) {
 		super(MessageType.ADDRESS_VERTEX_REQ, body);
 	}
-
-	
-	
-	
 }

@@ -52,8 +52,6 @@ public class EdgeAddressesUpdater implements Serializable, Callable<Integer> {
 
 	public static void updateEdgeAddress(ImgVertex vertex, ImgEdge edge) {
 		String address = StorageTools.getCellAddress(edge.getDestCellId());
-		//TODO
-		//System.out.println("updateEdgeAddress : \tedge : " + edge + ", \taddress : " + address);
 		vertex.addEdgeAddress(edge, address);
 	}
 	

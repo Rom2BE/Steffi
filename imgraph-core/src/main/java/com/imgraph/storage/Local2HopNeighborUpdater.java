@@ -212,15 +212,6 @@ public class Local2HopNeighborUpdater implements ResponseProcessor {
 	}
 	
 	public static void processUpdateRequest(Update2HNReqMsg updateMsg) {
-		//FIXME
-		Map<String, List<Long>> cellsIdMap = TestTools.getCellsID();
-		
-		for(Entry<String, List<Long>> entry : cellsIdMap.entrySet()){
-			for (Long id : entry.getValue()){
-				ImgraphGraph.getInstance().getRawGraph().retrieveCell(id);
-			}
-		}
-		//FIXME
 		final ImgGraph graph = ImgGraph.getInstance();
 		if (updateMsg.getLocal2HNUpd() != null) {
 			updateMsg.getLocal2HNUpd().forEachEntry(new TLongObjectProcedure<ImgIndexedEdges>() {
@@ -241,9 +232,8 @@ public class Local2HopNeighborUpdater implements ResponseProcessor {
 			
 			for (ImgEdge removedEdge : updateMsg.getRemovedEdges()) {
 				ImgIndexedEdges indexedEdges = Local2HopNeighbors.getNeighbors(removedEdge.getDestCellId());
-				//FIXME
 				if(indexedEdges != null){
-					Collection<ImgEdge> edges = indexedEdges.getAllEdges(); //TODO
+					Collection<ImgEdge> edges = indexedEdges.getAllEdges();
 					
 					if (edges.size() <= 2) {
 						Local2HopNeighbors.removeNeighbors(removedEdge.getDestCellId());
