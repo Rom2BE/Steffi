@@ -20,8 +20,6 @@ import com.imgraph.model.ImgIndexedEdges;
 import com.imgraph.model.ImgVertex;
 import com.imgraph.networking.messages.Message;
 import com.imgraph.networking.messages.Update2HNReqMsg;
-import com.imgraph.testing.TestTools;
-import com.tinkerpop.blueprints.impls.imgraph.ImgraphGraph;
 
 /**
  * @author Aldemar Reynaga

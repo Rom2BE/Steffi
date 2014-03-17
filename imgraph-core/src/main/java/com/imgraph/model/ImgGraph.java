@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -30,6 +31,7 @@ import com.imgraph.storage.CellTransactionFactory;
 import com.imgraph.storage.CellTransactionThread;
 import com.imgraph.storage.GraphNamesManager;
 import com.imgraph.storage.StorageTools;
+import com.imgraph.testing.TestTools;
 
 /**
  * @author Aldemar Reynaga
@@ -323,9 +325,14 @@ public class ImgGraph implements Serializable {
 		return result;
 	}
 	
-	//TODO
 	public Iterable<ImgVertex> getVertices() {
-		throw new UnsupportedOperationException();
+		List<ImgVertex> result = new ArrayList<ImgVertex>();
+		Map<String, List<Long>> cellsIdMap = TestTools.getCellsID();
+		for (Entry<String, List<Long>> entry : cellsIdMap.entrySet()){
+			for (Long id : entry.getValue())
+				result.add((ImgVertex) this.retrieveCell(id));
+		}
+		return result;
 	}
 	
 	public ImgVertex getVertexByName(String vertexName) {
