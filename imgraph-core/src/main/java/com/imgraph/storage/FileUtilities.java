@@ -159,7 +159,6 @@ public class FileUtilities {
 		Map<String, Object> mapObject = new HashMap<String, Object>();
 		
 		Map<String, List<Long>> cellsIdMap = TestTools.getCellsID();
-		
 		//First Loop : create all vertices using keySet()
 		Map<Long, Integer> indexMap = new HashMap<Long, Integer>();
 		List<Object> nodeList = new ArrayList<Object>();
@@ -185,7 +184,10 @@ public class FileUtilities {
 					Map<String, Object> e = new HashMap<String, Object>();
 					e.put("source", indexMap.get(id));
 					e.put("target", indexMap.get(edge.getDestCellId()));
-					e.put("value", 1);
+					if (StorageTools.getCellAddress(edge.getDestCellId()) == StorageTools.getCellAddress(id))
+						e.put("value", 1);
+					else 
+						e.put("value", 10);
 					edgeList.add(e);
 				}
 			}

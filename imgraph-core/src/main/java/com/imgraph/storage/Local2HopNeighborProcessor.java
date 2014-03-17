@@ -70,13 +70,9 @@ public class Local2HopNeighborProcessor implements Serializable, Callable<Intege
 	private void updateNeighborFlags(int remoteAddressIndex, Collection<ImgEdge> edges,
 			Map<Long, ImgVertex> vertices) throws Exception {
 		
-		
 		Cache<Long, Object> cache = CacheContainer.getCellCache();
 		
 		for (ImgEdge edge : edges) {
-			
-			
-			
 			if (vertices != null) {
 				ImgVertex vertex = vertices.get(edge.getDestCellId());
 				vertex.markNeighborFlags(remoteAddressIndex, edge.getSourceCellId(), edge.getName());
@@ -85,23 +81,18 @@ public class Local2HopNeighborProcessor implements Serializable, Callable<Intege
 				ImgVertex vertex = (ImgVertex)cache.getAdvancedCache().getDataContainer().get(edge.getDestCellId()).getValue();
 				vertex.markNeighborFlags(remoteAddressIndex, edge.getSourceCellId(), edge.getName());
 			}
-			
 		}
-	
 	}
 	
 	private void collectCellIds(TLongSet cellIds, 
 			ImgIndexedEdges edges)  {
-		
 		
 		for (ImgEdge edge : edges.getAllEdges()) {
 			ExtImgEdge extEdge = (ExtImgEdge) edge;
 			if (extEdge.getNeighborFlag() == 0) {
 				cellIds.add(extEdge.getDestCellId());
 			}
-			
-		}
-			
+		}	
 	}
 	
 	public static void addInvertedEdges(int addressIndex, Long id, ImgIndexedEdges indexedEdges) {

@@ -61,6 +61,7 @@ public class ImgVertex extends Cell {
 		return edgesAddresses;
 	}
 	
+	@SuppressWarnings("rawtypes")
 	@Override
 	public void trimToSize() {
 		super.trimToSize();
@@ -226,7 +227,7 @@ public class ImgVertex extends Cell {
 				addressIndex);
 		
 		ImgEdge.removeEdgeFromCollection(invertedEdge, destVertex.edges);
-		destVertex.removeEdgeAddress(invertedEdge, StorageTools.getCellAddress(invertedEdge.getDestCellId()));
+		destVertex.removeEdgeAddress(invertedEdge, StorageTools.getCellAddress(invertedEdge.getDestCellId())); //FIXED
 		
 		CellTransaction cellTransaction = CellTransactionThread.get();
 		

@@ -92,6 +92,17 @@ public class BasicConsole {
 		CacheContainer.getCacheContainer().start();
 		CacheContainer.getCellCache().start();
 		ImgraphGraph graph = ImgraphGraph.getInstance();
+		//FIXME To go faster
+		ClusterConfigManager configManager = new ClusterConfigManager();
+		try {
+			configManager.initialize();
+			System.out.println("The cluster configuration was executed satisfactorily");
+		} catch (Exception x) {
+			x.printStackTrace();
+		} finally {
+			configManager.closeClientThreads();
+		}
+		//FIXME
 		while (true) {
 			System.out.println("\nWaiting for your command :");
 			command = IOUtils.readLine(">");
@@ -579,19 +590,8 @@ public class BasicConsole {
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
-			} else if (command.equals("saveD3")) {
+			} else if (command.equals("show")) {
 				try {
-					/*
-					Map<String, List<Long>> cellsIdMap = TestTools.getCellsID();
-					long maxID = 0;
-					for(Entry<String, List<Long>> entry : cellsIdMap.entrySet()){
-						for (Long id : entry.getValue()){
-							if(id>maxID)
-								maxID = id;
-						}
-					}
-					FileUtilities.writeD3ToFile("../data/data.json", maxID);
-					*/
 					FileUtilities.writeD3ToFile("../data/data.json");
 					System.out.println("OK");
 				} catch (IOException e) {
@@ -849,7 +849,7 @@ public class BasicConsole {
 		            System.out.println(inetAddr.getHostAddress());
 		        }
 			
-			} else if (command.equals("configCluster")){
+			} /*else if (command.equals("configCluster")){
 				ClusterConfigManager configManager = new ClusterConfigManager();
 				try {
 					configManager.initialize();
@@ -860,7 +860,7 @@ public class BasicConsole {
 					configManager.closeClientThreads();
 				}
 				
-			} else if (command.equals("write")){
+			} */else if (command.equals("write")){
 			
 				String directory = IOUtils.readLine("Directory: ");
 				command = IOUtils.readLine("File name prefix: ");
