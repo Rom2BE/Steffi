@@ -12,6 +12,11 @@
   stroke-opacity: .6;
 }
 
+.node text {
+  pointer-events: none;
+  font: 6px sans-serif;
+}
+
 </style>
 <body>
 <script src="d3.v3.min.js"></script>
@@ -51,19 +56,30 @@ d3.json("data.json", function(error, graph) {
       .style("fill", function(d) { return color(d.group); })
       .call(force.drag);
 
+  var texts = svg.selectAll("text.label")
+      .data(graph.nodes)
+      .enter().append("text")
+      .attr("class", "label")
+      .attr("fill", "black")
+      .text(function(d) {  return d.name;  });
+
   //Display node name when mouse on a node
   node.append("title")
       .text(function(d) { return d.name; });
   
   //Where and how nodes are displayed
   force.on("tick", function() {
-    node.attr("cx", function(d) { return d.x; })
-        .attr("cy", function(d) { return d.y; });
-
     link.attr("x1", function(d) { return d.source.x; })
         .attr("y1", function(d) { return d.source.y; })
         .attr("x2", function(d) { return d.target.x; })
         .attr("y2", function(d) { return d.target.y; });
+
+    node.attr("cx", function(d) { return d.x; })
+        .attr("cy", function(d) { return d.y; });
+
+    texts.attr("transform", function(d) {
+        return "translate(" + d.x + "," + d.y + ")";
+    });
   });
 
   //Legend

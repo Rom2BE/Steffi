@@ -166,7 +166,7 @@ public class FileUtilities {
 		for (Entry<String, List<Long>> entry : cellsIdMap.entrySet()){
 			for(long id : entry.getValue()){
 				Map<String, Object> node = new HashMap<String, Object>();
-				node.put("name", "Vertex " + id);
+				node.put("name", id);
 				node.put("group", entry.getKey());
 				nodeList.add(node);
 				indexMap.put(id, i);
