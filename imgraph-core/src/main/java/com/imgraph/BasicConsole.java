@@ -42,6 +42,7 @@ import com.imgraph.storage.FileUtilities;
 import com.imgraph.storage.ImgpFileTools;
 import com.imgraph.storage.Local2HopNeighbors;
 import com.imgraph.storage.StorageTools;
+import com.imgraph.testing.Pair;
 import com.imgraph.testing.StatisticalIndicators;
 import com.imgraph.testing.TestTools;
 import com.imgraph.traversal.DistributedTraversal;
@@ -157,9 +158,8 @@ public class BasicConsole {
 				ImgVertex v = (ImgVertex) graph.getRawGraph().retrieveCell(Long.parseLong(vertexId));
 				
 				System.out.println(v);
-			} else if (command.equals("printConnections")) {
+			} else if (command.equals("printAll")) {
 				//Print Vertices and Edges
-				//TODO should be rewritten
 				Map<String, List<Long>> cellsIdMap = TestTools.getCellsID();
 				long maxID = 0;
 				for(Entry<String, List<Long>> entry : cellsIdMap.entrySet()){
@@ -171,6 +171,7 @@ public class BasicConsole {
 				Map<Long, Map<Long, String>> connectionsMap = TestTools.getConnections(maxID);
 				String result = "";
 				String connectedTo = "";
+				String neighboursList = "";
 				Iterator<Entry<Long, Map<Long, String>>> entries = connectionsMap.entrySet().iterator();
 				while (entries.hasNext()) {
 					result = "";
@@ -178,12 +179,12 @@ public class BasicConsole {
 					Long vertexID = vertexInfo.getKey();
 					Map<Long,String> edges = vertexInfo.getValue(); //Edges
 					
-					result += "Vertex " + vertexID + " : "
-							+ "\n\t - is stored @ " + StorageTools.getCellAddress(vertexID);
+					result += "Vertex " + vertexID + " : "										//VertexID
+							+ "\n\t - is stored @ " + StorageTools.getCellAddress(vertexID);	//Address
 					if (edges.size()>0){
 						result += "\n\t - is connected to [";
 						connectedTo = "";
-						for(Map.Entry<Long,String> edge : edges.entrySet()) {
+						for(Map.Entry<Long,String> edge : edges.entrySet()) {					//Connected To
 							if(connectedTo.equals(""))
 								connectedTo += edge.getKey();
 							else
@@ -192,6 +193,19 @@ public class BasicConsole {
 						connectedTo += "]";
 					}
 					System.out.println(result+connectedTo);	
+														
+					ImgVertex vertex = (ImgVertex) graph.getRawGraph().retrieveCell(vertexID);	//Attributes
+					for (String key : vertex.getAttributeKeys()){
+						System.out.println("\t - " + key + " : " + vertex.getAttribute(key));
+					}
+					
+					Map<Pair<Object>, Float> neighbours = TestTools.getNeighborhoodVector(vertexID);		//NeighbourVector
+					neighboursList = "\t - neighbour vector [";
+					for (Entry<Pair<Object>, Float> entry : neighbours.entrySet()){
+						neighboursList += "{"+entry.getKey()+","+entry.getValue()+"},";
+					}
+					neighboursList += "]"; //TODO substring to delete the last ,
+					System.out.println(neighboursList);	
 				}
 				//Print Machines
 				int i = 1;

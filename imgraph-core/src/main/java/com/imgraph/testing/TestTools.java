@@ -203,6 +203,8 @@ public class TestTools {
 		Random randomGen = new Random();
 		ImgraphGraph graph = ImgraphGraph.getInstance();
 		graph.registerItemName("Name");
+		graph.registerItemName("Size");
+		graph.registerItemName("Weight");
 		while(i<numVertices+1){
 			do{
 				if(security > maxId){ //prevent infinite loop if wrong input ranges
@@ -219,8 +221,12 @@ public class TestTools {
 			security = 0;
 			securityLoop = minId-1;
 			graph.startTransaction();
-			Vertex vertex = graph.addVertex(id);
-			vertex.setProperty("Name", "Vertex "+id);
+			
+			ImgVertex vertex = graph.getRawGraph().addVertex(id, "Vertex "+id);
+			int size = 120+randomGen.nextInt(100);
+			vertex.putAttribute("Size", size);
+			vertex.putAttribute("Weight", size/2);
+			
 			graph.stopTransaction(Conclusion.SUCCESS);
 			i++;
 		}
@@ -314,25 +320,7 @@ public class TestTools {
 	 *		* the name of the machine where the dest vertex is stored
 	 * result Map<VertexID, Map<DestVertexID, MachineName>>
 	 */
-	/* Only works for local information
-	public static Map<Long, Map<Long, String>> getConnections(){
-		Map<Long,Map<Long,String>> resultMap = new TreeMap<Long,Map<Long,String>>();
-		Cache<Long, Cell> cellCache = CacheContainer.getCellCache();
-		
-		for (Cell cell : cellCache.values()){
-			if (cell.getCellType().equals(CellType.VERTEX)){
-				Map<Long,String> connectionMap = new TreeMap<Long,String>();
-				for(ImgEdge edge : ((ImgVertex) cell).getEdges()){
-					connectionMap.put(edge.getDestCellId(), StorageTools.getCellAddress(edge.getDestCellId()));
-				}
-				resultMap.put(cell.getId(), connectionMap);
-			}
-		}
-		
-		return resultMap;
-	}
-	*/
-	public static Map<Long, Map<Long, String>> getConnections(long maxID){
+	public static Map<Long, Map<Long, String>> getConnections(long maxID){ //TODO use getCellsID
 		Map<Long,Map<Long,String>> resultMap = new TreeMap<Long,Map<Long,String>>();
 		Long l;
 		ImgVertex v;
@@ -381,6 +369,48 @@ public class TestTools {
 		}
 		return result;
 	}
+	
+	/**
+	 * 
+	 * @param id
+	 * @return
+	 */
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public static Map<Pair<Object>, Float> getNeighborhoodVector(long id){
+		Map<Pair<Object>, Float> result = new HashMap<Pair<Object>, Float>();
+		ImgVertex vertex = (ImgVertex) ImgraphGraph.getInstance().getRawGraph().retrieveCell(id);
+		if (vertex!=null){
+			for (String key : vertex.getAttributeKeys()){
+				result.put(new Pair(key,vertex.getAttribute(key)), 1F); //The value stored in the original vertex 
+			}
+			ImgVertex destVertex;
+			ImgVertex destVertex2H;
+			for (ImgEdge edge : vertex.getEdges()){ 					//Get 1 hop edges 
+				destVertex = (ImgVertex) ImgraphGraph.getInstance().getRawGraph().retrieveCell(edge.getDestCellId());
+				for (String key : destVertex.getAttributeKeys()){
+					//Values stored at 1 hop
+					if (result.containsKey(key + " : " + destVertex.getAttribute(key)))	//Value already in the vector	
+						result.put(new Pair(key,destVertex.getAttribute(key)), result.get(new Pair(key,destVertex.getAttribute(key)))+0.5F); 
+					else													//Value seen for the first time
+						result.put(new Pair(key,destVertex.getAttribute(key)), 0.5F);
+				}
+				for (ImgEdge edge2H : destVertex.getEdges()){ 			//Get 2 hops edges
+					if (edge2H.getDestCellId() != vertex.getId()) { 	//Do not go back on the original vertex
+						destVertex2H = (ImgVertex) ImgraphGraph.getInstance().getRawGraph().retrieveCell(edge2H.getDestCellId());
+						for (String key : destVertex2H.getAttributeKeys()){
+							//Values stored at 2 hops
+							if (result.containsKey(key + " : " + destVertex2H.getAttribute(key)))	//Value already in the vector	
+								result.put(new Pair(key,destVertex2H.getAttribute(key)), result.get(new Pair(key,destVertex2H.getAttribute(key)))+0.25F);
+							else											//Value seen for the first time
+								result.put(new Pair(key,destVertex2H.getAttribute(key)), 0.25F);
+						}
+					}
+				}
+			}
+		}
+		return result;
+	}
+	
 	
 	private static void runTraversal(DistributedTraversal traversal, 
 			long startVertexId, long endVertexId, ImgGraph graph, 
@@ -776,3 +806,5 @@ public class TestTools {
 		
 	}
 }
+
+
