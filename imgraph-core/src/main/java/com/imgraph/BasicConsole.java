@@ -24,7 +24,6 @@ import com.imgraph.common.IOUtils;
 import com.imgraph.common.ImgLogger;
 import com.imgraph.index.ImgIndex;
 import com.imgraph.index.ImgIndexHits;
-import com.imgraph.index.NeighborhoodVector;
 import com.imgraph.index.Pair;
 import com.imgraph.loader.LoadVertexInfo;
 import com.imgraph.loader.TextFileLoader;
@@ -200,8 +199,8 @@ public class BasicConsole {
 						System.out.println("\t - " + key + " : " + vertex.getAttribute(key));
 					}
 					
-					Map<Pair<Object>, Float> neighbours = NeighborhoodVector.getNeighborhoodVector(vertexID);		//NeighbourVector
-					neighboursList = "\t - neighbour vector [";
+					Map<Pair<Object>, Float> neighbours = vertex.getNeighborhoodVector().getVector();		//NeighbourVector
+					neighboursList = "\t - neighborhood vector [";
 					for (Entry<Pair<Object>, Float> entry : neighbours.entrySet()){
 						neighboursList += "{"+entry.getKey()+","+entry.getValue()+"},";
 					}

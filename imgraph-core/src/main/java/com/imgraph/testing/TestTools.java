@@ -24,7 +24,6 @@ import org.zeromq.ZMQ;
 
 import com.imgraph.common.BigTextFile;
 import com.imgraph.common.Configuration;
-import com.imgraph.index.Pair;
 import com.imgraph.model.Cell;
 import com.imgraph.model.EdgeType;
 import com.imgraph.model.ImgEdge;

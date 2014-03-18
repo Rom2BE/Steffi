@@ -1,26 +1,28 @@
 package com.imgraph.index;
 
+import java.io.Serializable;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import com.imgraph.model.ImgEdge;
 import com.imgraph.model.ImgVertex;
 import com.tinkerpop.blueprints.impls.imgraph.ImgraphGraph;
 
-public class NeighborhoodVector {
+public class NeighborhoodVector implements Serializable{
 
-	Map<Pair<Object>, Float> vector;
+	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 766758468137921169L;
+	private Map<Pair<Object>, Float> vector;
 	
 	public NeighborhoodVector() {
 		vector = new HashMap<Pair<Object>, Float>();
 	}
 	
-	public NeighborhoodVector(List<Pair<Object>> list) {
-		this();
-		for (Pair<Object> pair : list){
-			vector.put(pair, 1.0F);
-		}
+	public NeighborhoodVector(Map<Pair<Object>, Float> vector) {
+		this.vector = vector;
 	}
 	
 	public Map<Pair<Object>, Float> getVector() {
@@ -65,6 +67,26 @@ public class NeighborhoodVector {
 			}
 		}
 		return result;
+	}
+	
+	public static void updateNeighborhoodVector(long id){
+		ImgVertex vertex = (ImgVertex) ImgraphGraph.getInstance().getRawGraph().retrieveCell(id);
+		if (vertex!=null){
+			vertex.setNeighborhoodVector(getNeighborhoodVector(id));
+			ImgVertex destVertex;
+			ImgVertex destVertex2H;
+			for (ImgEdge edge : vertex.getEdges()){ 					//Get 1 hop edges 
+				destVertex = (ImgVertex) ImgraphGraph.getInstance().getRawGraph().retrieveCell(edge.getDestCellId());
+				destVertex.setNeighborhoodVector(getNeighborhoodVector(edge.getDestCellId()));
+				
+				for (ImgEdge edge2H : destVertex.getEdges()){ 			//Get 2 hops edges
+					if (edge2H.getDestCellId() != vertex.getId()) { 	//Do not go back on the original vertex
+						destVertex2H = (ImgVertex) ImgraphGraph.getInstance().getRawGraph().retrieveCell(edge2H.getDestCellId());
+						destVertex2H.setNeighborhoodVector(getNeighborhoodVector(edge2H.getDestCellId()));
+					}
+				}
+			}
+		}
 	}
 	
 	public String toString() {
