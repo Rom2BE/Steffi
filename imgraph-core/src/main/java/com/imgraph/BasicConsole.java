@@ -24,6 +24,8 @@ import com.imgraph.common.IOUtils;
 import com.imgraph.common.ImgLogger;
 import com.imgraph.index.ImgIndex;
 import com.imgraph.index.ImgIndexHits;
+import com.imgraph.index.NeighborhoodVector;
+import com.imgraph.index.Pair;
 import com.imgraph.loader.LoadVertexInfo;
 import com.imgraph.loader.TextFileLoader;
 import com.imgraph.model.EdgeType;
@@ -42,7 +44,6 @@ import com.imgraph.storage.FileUtilities;
 import com.imgraph.storage.ImgpFileTools;
 import com.imgraph.storage.Local2HopNeighbors;
 import com.imgraph.storage.StorageTools;
-import com.imgraph.testing.Pair;
 import com.imgraph.testing.StatisticalIndicators;
 import com.imgraph.testing.TestTools;
 import com.imgraph.traversal.DistributedTraversal;
@@ -199,7 +200,7 @@ public class BasicConsole {
 						System.out.println("\t - " + key + " : " + vertex.getAttribute(key));
 					}
 					
-					Map<Pair<Object>, Float> neighbours = TestTools.getNeighborhoodVector(vertexID);		//NeighbourVector
+					Map<Pair<Object>, Float> neighbours = NeighborhoodVector.getNeighborhoodVector(vertexID);		//NeighbourVector
 					neighboursList = "\t - neighbour vector [";
 					for (Entry<Pair<Object>, Float> entry : neighbours.entrySet()){
 						neighboursList += "{"+entry.getKey()+","+entry.getValue()+"},";

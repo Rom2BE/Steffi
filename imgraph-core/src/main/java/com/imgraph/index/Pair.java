@@ -1,4 +1,4 @@
-package com.imgraph.testing;
+package com.imgraph.index;
 
 @SuppressWarnings("hiding")
 public class Pair<Object> { 
