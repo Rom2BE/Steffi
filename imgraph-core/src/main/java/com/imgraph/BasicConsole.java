@@ -24,7 +24,6 @@ import com.imgraph.common.IOUtils;
 import com.imgraph.common.ImgLogger;
 import com.imgraph.index.ImgIndex;
 import com.imgraph.index.ImgIndexHits;
-import com.imgraph.index.Pair;
 import com.imgraph.loader.LoadVertexInfo;
 import com.imgraph.loader.TextFileLoader;
 import com.imgraph.model.EdgeType;
@@ -104,6 +103,8 @@ public class BasicConsole {
 			configManager.closeClientThreads();
 		}
 		//FIXME
+		
+		//TODO check input
 		while (true) {
 			System.out.println("\nWaiting for your command :");
 			command = IOUtils.readLine(">");
@@ -170,43 +171,49 @@ public class BasicConsole {
 				}
 				Map<Long, Map<Long, String>> connectionsMap = TestTools.getConnections(maxID);
 				String result = "";
-				String connectedTo = "";
-				String neighboursList = "";
+				String oneHop = "";
+				String twoHop = "";
 				Iterator<Entry<Long, Map<Long, String>>> entries = connectionsMap.entrySet().iterator();
 				while (entries.hasNext()) {
 					result = "";
 					Entry<Long, Map<Long, String>> vertexInfo = entries.next();
 					Long vertexID = vertexInfo.getKey();
+					ImgVertex vertex = (ImgVertex) ImgraphGraph.getInstance().getRawGraph().retrieveCell(vertexID);
 					Map<Long,String> edges = vertexInfo.getValue(); //Edges
-					
-					result += "Vertex " + vertexID + " : "										//VertexID
-							+ "\n\t - is stored @ " + StorageTools.getCellAddress(vertexID);	//Address
+					//Id & Location
+					result += "Vertex " + vertexID + " : "										
+							+ "\n\t - is stored @ " + StorageTools.getCellAddress(vertexID);
+					System.out.println(result);
+					//Connections (1&2 hops)
 					if (edges.size()>0){
-						result += "\n\t - is connected to [";
-						connectedTo = "";
-						for(Map.Entry<Long,String> edge : edges.entrySet()) {					//Connected To
-							if(connectedTo.equals(""))
-								connectedTo += edge.getKey();
+						result = "\t - is connected to [";
+						oneHop = "";
+						twoHop = "";
+						for(ImgEdge edge : vertex.getEdges()) {					//Connected To
+							if(oneHop.equals(""))
+								oneHop += edge.getDestCellId();
 							else
-								connectedTo += ","+edge.getKey();
+								oneHop += ","+edge.getDestCellId();
+							
+							for (ImgEdge twoHopEdges : ((ImgVertex) ImgraphGraph.getInstance().getRawGraph().retrieveCell(edge.getDestCellId())).getEdges()){
+								if(twoHopEdges.getDestCellId() != vertexID){
+									if(twoHop.equals(""))
+										twoHop += twoHopEdges.getDestCellId();
+									else
+										twoHop += ","+twoHopEdges.getDestCellId();
+								}
+							}
 						}
-						connectedTo += "]";
-					}
-					System.out.println(result+connectedTo);	
-														
-					ImgVertex vertex = (ImgVertex) graph.getRawGraph().retrieveCell(vertexID);	//Attributes
+						System.out.println(result+"1H : {"+oneHop+"}, 2H : {"+twoHop+"}]");	
+					}	
+					//Attributes
 					for (String key : vertex.getAttributeKeys()){
 						System.out.println("\t - " + key + " : " + vertex.getAttribute(key));
 					}
-					
-					Map<Pair<Object>, Float> neighbours = vertex.getNeighborhoodVector().getVector();		//NeighbourVector
-					neighboursList = "\t - neighborhood vector [";
-					for (Entry<Pair<Object>, Float> entry : neighbours.entrySet()){
-						neighboursList += "{"+entry.getKey()+","+entry.getValue()+"},";
-					}
-					neighboursList += "]"; //TODO substring to delete the last ,
-					System.out.println(neighboursList);	
+					//Neighborhood vector
+					System.out.println(vertex.getNeighborhoodVector());
 				}
+				
 				//Print Machines
 				int i = 1;
 				for (Address address : CacheContainer.getCacheContainer().getTransport().getMembers()){
@@ -472,6 +479,8 @@ public class BasicConsole {
 				vertexIds.add(9L);
 				vertexIds.add(10L);
 				
+				
+				
 				Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
 				ZMQ.Socket socket = null;
 				ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
@@ -500,6 +509,10 @@ public class BasicConsole {
 				}finally {
 					if (socket !=null)
 						socket.close();
+				}
+				System.out.println(CacheContainer.getCellCache().getCacheManager().getAddress().toString());
+				for (long i=1; i<11; i++){
+					System.out.println(StorageTools.getCellAddress(i));
 				}
 			} else if (command.equals("move")) { //TODO move
 				try {			

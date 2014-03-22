@@ -8,6 +8,7 @@ import java.util.List;
 import org.infinispan.Cache;
 import org.zeromq.ZMQ.Socket;
 
+import com.imgraph.index.NeighborhoodVector;
 import com.imgraph.model.Cell;
 import com.imgraph.model.CellType;
 import com.imgraph.model.ImgGraph;
@@ -19,6 +20,7 @@ import com.imgraph.networking.messages.ClusterAddressesRep;
 import com.imgraph.networking.messages.IdentifiableMessage;
 import com.imgraph.networking.messages.LocalNeighborsRepMsg;
 import com.imgraph.networking.messages.LocalNeighborsReqMsg;
+import com.imgraph.networking.messages.LocalVectorUpdateReqMsg;
 import com.imgraph.networking.messages.LocalVertexIdRepMsg;
 import com.imgraph.networking.messages.LocalVertexIdReqMsg;
 import com.imgraph.networking.messages.Message;
@@ -96,8 +98,6 @@ public abstract class CommandProcessor {
 		LocalVertexIdRepMsg response = new LocalVertexIdRepMsg();
 		List<Long> list = response.getCellIds();
 		if(reqMsg != null){
-//			for (Long cellId : reqMsg.getCellIds())
-//				response.getCellAddresses().put(cellId, StorageTools.getCellAddress(cellId));
 			Cache<Long, Cell> cellCache = CacheContainer.getCellCache();
 			for (Cell cell : cellCache.values()){
 				if (cell.getCellType().equals(CellType.VERTEX))
@@ -109,6 +109,23 @@ public abstract class CommandProcessor {
 		else
 			System.out.println("No Vertex found");
 	}
+	
+	public static void processLocalVectorUpdateRequest(Socket socket,
+			LocalVectorUpdateReqMsg reqMsg) throws IOException {
+		if(reqMsg != null){
+			Cache<Long, Cell> cache = CacheContainer.getCellCache();
+			for (Long cellId : reqMsg.getCellIds()){
+				//Cell stored on this machine
+				if (StorageTools.getCellAddress(cellId).equals(cache.getCacheManager().getAddress().toString()))
+					NeighborhoodVector.updateFullNeighborhoodVector((ImgVertex) cache.get(cellId));					
+			}
+			Message response = new Message(MessageType.LOCAL_VECTOR_UPDATE_REP, "OK");
+			response.setBody("OK");
+			socket.send(Message.convertMessageToBytes(response), 0);
+		}
+		else
+			System.out.println("No Vertex found");
+	}	
 	
 	public static void processCellNumberRequest(Socket socket) throws IOException {
 		Message response = new Message(MessageType.NUMBER_OF_CELLS_REP);
@@ -123,5 +140,5 @@ public abstract class CommandProcessor {
 		response.setBody("OK");
 		response.setId(update2HNReqMsg.getId());
 		socket.send(Message.convertMessageToBytes(response), 0);
-	}	
+	}
 }

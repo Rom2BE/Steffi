@@ -291,8 +291,7 @@ public class ImgraphGraph implements Graph, TransactionalGraph, IndexableGraph {
 
 	@Override
 	public void rollback() {
-		rawGraph.stopTransaction(TransactionConclusion.ROLLBACK);
-		
+		rawGraph.stopTransaction(TransactionConclusion.ROLLBACK);		
 	}
 
 

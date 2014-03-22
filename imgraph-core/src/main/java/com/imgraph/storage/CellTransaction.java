@@ -2,22 +2,31 @@ package com.imgraph.storage;
 
 
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Map.Entry;
 
 import javax.transaction.TransactionManager;
 
 import org.infinispan.Cache;
+import org.zeromq.ZMQ;
 
 import com.imgraph.common.Configuration;
 import com.imgraph.common.Configuration.Key;
 import com.imgraph.index.ImgIndex;
+import com.imgraph.index.NeighborhoodVector;
 import com.imgraph.model.Cell;
 import com.imgraph.model.CellType;
 import com.imgraph.model.ImgEdge;
 import com.imgraph.model.ImgGraph;
+import com.imgraph.model.ImgVertex;
+import com.imgraph.networking.messages.LocalVectorUpdateReqMsg;
+import com.imgraph.networking.messages.Message;
 
 
 /**
@@ -63,6 +72,7 @@ public class CellTransaction {
 		getIndexOperation(indexName, key, cell).removeKeyValue(key, value, cell);
 	}
 	
+	@SuppressWarnings("unchecked")
 	private <T extends Cell> IndexOperation<Cell> getIndexOperation(String indexName, String key, T cell) {
 		String indexOpKey = makeIndexOperationKey(key, cell);
 		IndexOperation<Cell> indexOperation = getIndexOperations().get(indexOpKey);
@@ -163,7 +173,6 @@ public class CellTransaction {
 			graph.storeCell(cellOp.getCellId(), cellOp.getCell());
 		} 
 		
-		
 	}
 	
 	private void updateIndexes () {
@@ -175,6 +184,7 @@ public class CellTransaction {
 	
 	public void commit() {
 		Cache<Long, Object> cache = CacheContainer.getCellCache();
+		List<Long> cellList = new ArrayList<Long>();
 		TransactionManager tm = null;
 		Local2HopNeighborUpdater local2HNUpdater = null;
 		if (Configuration.getProperty(Key.USE_JTA_TRANSACTIONS).equals("true"))
@@ -185,13 +195,17 @@ public class CellTransaction {
 				
 			if (!transactionCells.isEmpty()) {
 				for (CellOperations cellOp: transactionCells.values())
-					if (!cellOp.getTypes().isEmpty())
-						executeCellOperation(cache,cellOp);	
+					if (!cellOp.getTypes().isEmpty()){
+						cellList.add(cellOp.getCellId());
+						executeCellOperation(cache,cellOp);
+					}
 			}
 			
-			for (Long cellId : getRemovedCellIds())
+			for (Long cellId : getRemovedCellIds()){
+				cellList.add(cellId);
 				cache.remove(cellId);
-			
+			}
+
 			local2HNUpdater = new Local2HopNeighborUpdater();
 			local2HNUpdater.update2HNList(transactionCells);
 			
@@ -209,8 +223,54 @@ public class CellTransaction {
 				}
 			throw new RuntimeException(e);
 		}
+				
 		closeTransaction();
 		
+		/**
+		 * Divide cellList depending on the machine the cell is stored
+		 *    - Stored on this machine : update its neighborhood vector
+		 *    - Otherwise : Send message to other machines to update their modified cells
+		 */
+		List<Long> distantIds = new ArrayList<Long>();
+		for (Long id : cellList){
+			if (StorageTools.getCellAddress(id).equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString()))
+				NeighborhoodVector.updateFullNeighborhoodVector((ImgVertex) CacheContainer.getCellCache().get(id));
+			else
+				distantIds.add(id);
+		}
+		
+		Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
+		ZMQ.Socket socket = null;
+		ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
+		
+		try {
+			for (Entry<String, String> entry : clusterAddresses.entrySet()) {
+				//Only send this message to other machines
+				if(!entry.getKey().equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString())){
+					socket = context.socket(ZMQ.REQ);
+					
+					socket.connect("tcp://" + entry.getValue() + ":" + 
+							Configuration.getProperty(Configuration.Key.NODE_PORT));
+				
+					LocalVectorUpdateReqMsg message = new LocalVectorUpdateReqMsg();
+					
+					message.setCellIds(distantIds);
+					
+					socket.send(Message.convertMessageToBytes(message), 0);
+					
+					Message response = Message.readFromBytes(socket.recv(0));
+					
+					System.out.println("Message : "+response);
+					
+					socket.close();
+				}
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}finally {
+			if (socket !=null)
+				socket.close();
+		}
 	}
 
 	public void rollback() {
@@ -218,9 +278,9 @@ public class CellTransaction {
 	}
 
 	private void closeTransaction() {
-		for (CellOperations cop : transactionCells.values()) 
+		for (CellOperations cop : transactionCells.values())
 			cop.clear();
-		
+
 		if (transactionCells != null)
 			transactionCells.clear();
 		

@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import com.imgraph.index.NeighborhoodVector;
-import com.imgraph.index.Pair;
+import com.imgraph.index.Tuple;
 import com.imgraph.storage.CellSequence;
 import com.imgraph.storage.CellTransaction;
 import com.imgraph.storage.CellTransactionThread;
@@ -39,6 +39,8 @@ public class ImgVertex extends Cell {
 		
 		if (transactionSupport)
 			CellTransactionThread.get().createCell(this);
+		
+		this.neighborhoodVector = new NeighborhoodVector();
 	}
 	
 	public ImgVertex(Long id, String name) {
@@ -54,6 +56,8 @@ public class ImgVertex extends Cell {
 		this.cellType = CellType.VERTEX;
 	
 		this.edges = edges;	
+		
+		this.neighborhoodVector = new NeighborhoodVector();
 	}
 	
 	
@@ -86,7 +90,7 @@ public class ImgVertex extends Cell {
 			adrEdges = new ImgMapEdges();
 			edgesAddresses[addressIndex] = adrEdges;
 		}
-		adrEdges.addEdge(edge);		
+		adrEdges.addEdge(edge);	
 	}
 	
 	
@@ -94,7 +98,6 @@ public class ImgVertex extends Cell {
 		int addressIndex = ImgGraph.getInstance().getMemberIndex(address);
 		System.out.println("ImgVertex.removeEdgeAddress() int addressIndex : "+addressIndex+", address : "+address+", edge : "+edge);
 		edgesAddresses[addressIndex].remove(edge);
-		NeighborhoodVector.updateNeighborhoodVector(this.getId());
 	}
 	
 
@@ -116,14 +119,12 @@ public class ImgVertex extends Cell {
 		
 		CellTransactionThread.get().addEdge(this, relOut);
 		CellTransactionThread.get().addEdge(vertex, relIn);
-		NeighborhoodVector.updateNeighborhoodVector(this.getId());
 		
 		return relOut;
 	}
 	
 	public void addImgEdge(ImgEdge imgEdge) {
 		edges.add(imgEdge);
-		NeighborhoodVector.updateNeighborhoodVector(this.getId());
 	}
 	
 	public ImgEdge addPartialEdge(long vertexId, EdgeType edgeType, String name) {
@@ -143,7 +144,6 @@ public class ImgVertex extends Cell {
 		
 		if (transactionSupport)
 			CellTransactionThread.get().addEdge(this, edge);
-		NeighborhoodVector.updateNeighborhoodVector(this.getId());
 		return edge;
 	}
 	
@@ -208,7 +208,6 @@ public class ImgVertex extends Cell {
 		}
 		
 		CellTransactionThread.get().removeCell(this);
-		NeighborhoodVector.updateNeighborhoodVector(this.getId());
 	}
 	
 	public void removeEdge(ImgEdge edge) {
@@ -231,7 +230,6 @@ public class ImgVertex extends Cell {
 		
 		cellTransaction.removeEdge(this, edge);
 		cellTransaction.removeEdge(destVertex, invertedEdge);
-		NeighborhoodVector.updateNeighborhoodVector(this.getId());
 	}
 	
 	
@@ -333,15 +331,14 @@ public class ImgVertex extends Cell {
 		return neighborhoodVector;
 	}
 
-	public void setNeighborhoodVector(Map<Pair<Object>, Float> vector) {
+	public void setNeighborhoodVector(Map<String, List<Tuple<Object, Integer>>> vector) {
 		this.neighborhoodVector = new NeighborhoodVector(vector);
 	}
 	
-	public void putAttribute(String key, Object value) {
-		super.putAttribute(key, value);
-		NeighborhoodVector.updateNeighborhoodVector(this.getId());
+	public void setNeighborhoodVector(NeighborhoodVector vector) {
+		this.neighborhoodVector = vector;
 	}
-
+	
 	public Cell clone() {
 		ImgVertex clon =  (ImgVertex) super.clone();
 		
@@ -351,7 +348,7 @@ public class ImgVertex extends Cell {
 			EdgeAddressesUpdater.updateEdgeAddress(clon, clonedEdge);
 		}
 		
-		clon.setNeighborhoodVector(this.neighborhoodVector.getVector());
+		clon.setNeighborhoodVector(this.neighborhoodVector);
 		
 		return clon;
 	}	

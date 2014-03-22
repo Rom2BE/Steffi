@@ -232,6 +232,7 @@ public class TestTools {
 		}
 	}
 	
+	//TODO error when full edges
 	public static void genEdges(long minId, long maxId,
 			int numEdges, boolean directed) {
 		ImgraphGraph graph = ImgraphGraph.getInstance();
@@ -307,6 +308,7 @@ public class TestTools {
 				((ImgVertex) graph.getRawGraph().retrieveCell(idV1)).addEdge(((ImgVertex) graph.getRawGraph().retrieveCell(idV2)), directed, "Friend");
 				
 				graph.commit();
+
 				System.out.println(idV1 + " & " + idV2 + " are now Friends.");
 			}
 		}
@@ -339,6 +341,7 @@ public class TestTools {
 	
 	public static Map<String, List<Long>> getCellsID(){
 		Map<String, List<Long>> result = new TreeMap<String, List<Long>>();
+		//TODO method to send a message
 		Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
 		ZMQ.Socket socket = null;
 		ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
