@@ -64,29 +64,31 @@ public class NeighborhoodVector implements Serializable{
 					}
 				}
 			}
+			/**
+			 * Create an updated vector
+			 */
+			Map<String, List<Tuple<Object,Integer>>> vector = new HashMap<String, List<Tuple<Object,Integer>>>();
+			
+			//Add original cell information
+			for (String key : vertex.getAttributeKeys()){
+				List<Tuple<Object,Integer>> list = new ArrayList<Tuple<Object,Integer>>();
+				Tuple<Object,Integer> tuple = new Tuple<Object,Integer>(vertex.getAttribute(key), 100);
+				//TODO
+				list.add(tuple);
+				vector.put(key, list);
+			}
+			//Add 1 Hop cells information
+			vector = partialVectorUpdate(vector, cell1HopList, 50);
+			
+			//Add 2 Hops cells information
+			vector = partialVectorUpdate(vector, cell2HopList, 25);
+			
+			vertex.setNeighborhoodVector(vector);
 		}	
 		
+		else
+			System.out.println("Vertex is null");
 		
-		/**
-		 * Create an updated vector
-		 */
-		Map<String, List<Tuple<Object,Integer>>> vector = new HashMap<String, List<Tuple<Object,Integer>>>();
-		
-		//Add original cell information
-		for (String key : vertex.getAttributeKeys()){
-			List<Tuple<Object,Integer>> list = new ArrayList<Tuple<Object,Integer>>();
-			Tuple<Object,Integer> tuple = new Tuple<Object,Integer>(vertex.getAttribute(key), 100);
-			//TODO
-			list.add(tuple);
-			vector.put(key, list);
-		}
-		//Add 1 Hop cells information
-		vector = partialVectorUpdate(vector, cell1HopList, 50);
-		
-		//Add 2 Hops cells information
-		vector = partialVectorUpdate(vector, cell2HopList, 25);
-		
-		vertex.setNeighborhoodVector(vector);
 	}
 	//TODO one method
 	public static Map<String, List<Tuple<Object,Integer>>> updateNeighborhoodVector(ImgVertex vertex){

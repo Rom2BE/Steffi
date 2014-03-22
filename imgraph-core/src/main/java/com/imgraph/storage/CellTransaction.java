@@ -233,10 +233,13 @@ public class CellTransaction {
 		 */
 		List<Long> distantIds = new ArrayList<Long>();
 		for (Long id : cellList){
-			if (StorageTools.getCellAddress(id).equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString()))
-				NeighborhoodVector.updateFullNeighborhoodVector((ImgVertex) CacheContainer.getCellCache().get(id));
-			else
-				distantIds.add(id);
+			ImgVertex vertex = (ImgVertex) CacheContainer.getCellCache().get(id);
+			if (vertex != null){
+				if (StorageTools.getCellAddress(id).equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString()))
+					NeighborhoodVector.updateFullNeighborhoodVector(vertex);//can be null
+				else
+					distantIds.add(id);
+			}
 		}
 		
 		Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
@@ -258,9 +261,7 @@ public class CellTransaction {
 					
 					socket.send(Message.convertMessageToBytes(message), 0);
 					
-					Message response = Message.readFromBytes(socket.recv(0));
-					
-					System.out.println("Message : "+response);
+					Message.readFromBytes(socket.recv(0));
 					
 					socket.close();
 				}
