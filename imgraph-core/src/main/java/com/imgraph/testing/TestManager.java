@@ -59,6 +59,8 @@ public class TestManager {
 	}
 	
 	
+	//FIXME unused
+	@SuppressWarnings("unused")
 	private void warmUpTraversal(EdgeType edgeType) throws Exception {
 		SimpleTraversal traversal = new SimpleTraversal();
 		TraversalResults results = null;

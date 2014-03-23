@@ -12,7 +12,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
 
-import com.imgraph.index.NeighborhoodVector;
 import com.imgraph.loader.ResponseProcessor;
 import com.imgraph.model.ExtImgEdge;
 import com.imgraph.model.ImgEdge;

@@ -25,6 +25,7 @@ public class ClientThread implements Runnable{
 	private boolean alive;
 	private ResponseProcessor responseProcessor;
 
+	@SuppressWarnings("deprecation")
 	public ClientThread(String ipAddress, String address, String loadMngId,
 			ResponseProcessor loadResponseProcessor) {
 		

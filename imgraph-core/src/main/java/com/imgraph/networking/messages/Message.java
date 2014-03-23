@@ -23,7 +23,7 @@ public class Message implements Serializable {
 	
 	protected String body;
 	
-	private static final int BUFFER_SIZE = 1024*1024*10;
+	//FIXME private static final int BUFFER_SIZE = 1024*1024*10;
 		
 	public void setType(MessageType type) {
 		this.type = type;

@@ -34,6 +34,7 @@ public class ClientMultiThread implements Runnable {
 	
 	private Map<UUID, ResponseProcessor> pendingResponses;
 	
+	@SuppressWarnings("deprecation")
 	public ClientMultiThread(String ipAddress, String address) {
 		
 		context = ImgGraph.getInstance().getZMQContext();

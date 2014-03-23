@@ -24,11 +24,12 @@ public class TraversalClient implements Runnable {
 	private DistributedTraversal traversal;
 	private ImgGraph graph;
 	private int counter;
+	@SuppressWarnings("unused")
 	private int hops;
 	private List<NodePair> nodePairs;
 	private boolean running;
 
-	
+	//FIXME hops unused
 	public TraversalClient(int hops, EdgeTraversalConf edgeTraversalConf,
 			List<NodePair> nodePairs,
 			ImgGraph graph) {

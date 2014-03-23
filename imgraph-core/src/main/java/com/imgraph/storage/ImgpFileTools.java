@@ -41,6 +41,7 @@ import com.tinkerpop.blueprints.impls.imgraph.ImgraphVertex;
  * Functions to read and write text files using a format called IMGP which allows
  * faster batch loading. (Deprecated) 
  */
+@SuppressWarnings("deprecation")
 public class ImgpFileTools implements ResponseProcessor {
 
 	public static void loadVertexBlock(ImgraphGraph graph ,List<LoadVertexInfo> loadVertices) {

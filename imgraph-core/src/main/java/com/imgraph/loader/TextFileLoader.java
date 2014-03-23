@@ -37,6 +37,7 @@ import com.tinkerpop.blueprints.impls.imgraph.ImgraphGraph;
  * @author Aldemar Reynaga
  * Batch loader for text files using the edge list format or the adjacent list format  
  */
+@SuppressWarnings("deprecation")
 public class TextFileLoader implements ResponseProcessor {
 
 	private int pendingLoadBlocks;

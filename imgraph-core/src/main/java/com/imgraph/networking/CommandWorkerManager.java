@@ -45,7 +45,7 @@ public class CommandWorkerManager {
 		}
 	}
 	
-	
+	@SuppressWarnings("resource")
 	public void sendToCommandWorker(byte[] id, byte []msg, boolean msgFromReq) {
 		Socket socket = (msgFromReq)?backendSyncCommand:backendAsyncCommand;
 		
@@ -54,6 +54,7 @@ public class CommandWorkerManager {
 		socket.send(msg, 0);
 	}
 	
+	@SuppressWarnings("resource")
 	public void sentToFrontend(Socket frontend, boolean msgFromReq) {
 		Socket socket = (msgFromReq)?backendSyncCommand:backendAsyncCommand;
 		

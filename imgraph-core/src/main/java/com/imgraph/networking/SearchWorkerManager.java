@@ -176,6 +176,7 @@ public class SearchWorkerManager {
 	
 	
 	
+	@SuppressWarnings("serial")
 	public void sendToSearchWorker(final SearchReqMsg searchReqMsg) throws Exception {
 		
 		

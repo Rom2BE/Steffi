@@ -225,7 +225,9 @@ public class BasicConsole {
 						if (entry.getKey().equals(address.toString()))
 							machineCount = entry.getValue();
 					}
-					System.out.println("Machine "+i+"'s Address : "+ address.toString()+", \t IpAddress : "+StorageTools.getIpAddress(address)+"\t "+machineCount+" cells.");
+					System.out.println("Machine "+i+"'s Address : "+ address.toString()
+							+", \t IpAddress : "+StorageTools.getIpAddress(address)
+							+"\t "+machineCount+" cells.");
 					totalCount += machineCount;
 					i++;
 				}
@@ -264,7 +266,8 @@ public class BasicConsole {
 				
 				//Print sorted information (more comprehensive)
 				for (Entry<Long, List<Long>> entry : portalsMap.entrySet()){
-					System.out.println("Vertice "+entry.getKey()+", stored @ "+StorageTools.getCellAddress(entry.getKey())+" is connected to :");
+					System.out.println("Vertice "+entry.getKey()
+							+", stored @ "+StorageTools.getCellAddress(entry.getKey())+" is connected to :");
 					for (Long id : entry.getValue())
 						System.out.println("\t - ID :" +id+", stored @ "+StorageTools.getCellAddress(id));
 				}

@@ -68,6 +68,7 @@ public class ImgMapIndex<T extends Cell> implements ImgIndex<T> {
 			return new ImgMapIndexHits<T>(idElements.keySet().iterator(), idElements.size(), indexClass);	
 	}
 
+	@SuppressWarnings("rawtypes")
 	public void commitChanges(IndexOperation<T> operations) {	
 		if (operations.getNewKeyValues() != null) {
 			for (IndexOperationItem opItem : operations.getNewKeyValues()) {

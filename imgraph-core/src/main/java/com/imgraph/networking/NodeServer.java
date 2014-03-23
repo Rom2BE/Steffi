@@ -42,6 +42,7 @@ public class NodeServer implements Runnable{
 	}
 	
 	@Override
+	@SuppressWarnings("deprecation")
 	public void run() {
 		Message message = null;
 		boolean stop = false;
