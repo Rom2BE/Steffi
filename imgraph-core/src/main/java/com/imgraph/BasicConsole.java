@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +27,8 @@ import com.imgraph.common.IOUtils;
 import com.imgraph.common.ImgLogger;
 import com.imgraph.index.ImgIndex;
 import com.imgraph.index.ImgIndexHits;
+import com.imgraph.index.NeighborhoodVector;
+import com.imgraph.index.Tuple;
 import com.imgraph.loader.LoadVertexInfo;
 import com.imgraph.loader.TextFileLoader;
 import com.imgraph.model.EdgeType;
@@ -161,6 +164,10 @@ public class BasicConsole {
 				
 				System.out.println(v);
 			} else if (command.equals("printAll")) {
+				
+				//TODO print indexes
+				Map<Long, NeighborhoodVector> vectorsMap = new TreeMap<Long, NeighborhoodVector>();
+				
 				//Print Vertices and Edges
 				Map<String, List<Long>> cellsIdMap = TestTools.getCellsID();
 				long maxID = 0;
@@ -212,7 +219,9 @@ public class BasicConsole {
 						System.out.println("\t - " + key + " : " + vertex.getAttribute(key));
 					}
 					//Neighborhood vector
-					System.out.println(vertex.getNeighborhoodVector());
+					NeighborhoodVector vector = vertex.getNeighborhoodVector();
+					vectorsMap.put(vertexID, vector);
+					System.out.println(vector);
 				}
 				
 				//Print Machines
@@ -231,7 +240,58 @@ public class BasicConsole {
 					totalCount += machineCount;
 					i++;
 				}
-				System.out.println("Total Count = " + totalCount);
+				System.out.println("Total Cell Count = " + totalCount); //TODO Edge Count
+				//TODO do not get information here but in an dynamic update
+				//FIXME Stop cheating and do it!
+				/**
+				 * Put information in the AttributeIndex
+				 */
+				Map<String, Map<Object, List<Tuple<Long, Integer>>>> attributesIndex = new HashMap<String, Map<Object, List<Tuple<Long, Integer>>>>();
+				
+				//Each vertex has one NeighborhoodVector.
+				for (Entry<Long, NeighborhoodVector> entry : vectorsMap.entrySet()){
+					Map<String, List<Tuple<Object, Integer>>> vector = entry.getValue().getVector();
+					
+					//Each NeighborhoodVector is composed of a list of Tuple<Object, Integer>
+					for (Entry<String, List<Tuple<Object, Integer>>> attributeValue : vector.entrySet()){
+						//Get Size already saved
+						Map<Object, List<Tuple<Long, Integer>>> objectMapInAttributesMap = attributesIndex.get(attributeValue.getKey());
+						List<Tuple<Long, Integer>> tupleListInAttributesMap;
+						//Attribute seen for the first time
+						if (objectMapInAttributesMap == null)
+							objectMapInAttributesMap = new HashMap<Object, List<Tuple<Long, Integer>>>();
+						
+						for(Tuple<Object, Integer> tuple : attributeValue.getValue()){
+							tupleListInAttributesMap = objectMapInAttributesMap.get(tuple.getX());
+							//Value for this attribute seen for the first time
+							if (tupleListInAttributesMap == null)
+								tupleListInAttributesMap = new ArrayList<Tuple<Long, Integer>>();
+							
+							tupleListInAttributesMap.add(new Tuple<Long, Integer>(entry.getKey(), tuple.getY()));
+							objectMapInAttributesMap.put(tuple.getX(), tupleListInAttributesMap);
+						}
+						attributesIndex.put(attributeValue.getKey(), objectMapInAttributesMap);
+						
+					}
+				}
+				System.out.println("\nAttribute Index : ");
+				/**
+				 * Print information from the AttributeIndex
+				 */
+				String valueIntensities = "";
+				for (Entry<String, Map<Object, List<Tuple<Long, Integer>>>> entry : attributesIndex.entrySet()){
+					System.out.println(entry.getKey() + ":");
+					for (Entry<Object, List<Tuple<Long, Integer>>> attributeValue : entry.getValue().entrySet()){
+						System.out.print("\t"+attributeValue.getKey() + " : ");
+						valueIntensities = "[";
+						for(Tuple<Long, Integer> tuple : attributeValue.getValue()){
+							valueIntensities += tuple+", ";
+						}
+						valueIntensities = valueIntensities.substring(0, valueIntensities.length()-2);
+						valueIntensities += "]";
+						System.out.println(valueIntensities);
+					}
+				}
 				
 			} else if (command.equals("printPortals")) {
 				int vertexCounter = 0;

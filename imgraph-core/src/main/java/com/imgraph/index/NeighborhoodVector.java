@@ -48,17 +48,13 @@ public class NeighborhoodVector implements Serializable{
 			ImgVertex dest2HVertex;
 			for (ImgEdge edge : vertex.getEdges()){ 					//Get 1 hop edges
 				destVertex = (ImgVertex) CacheContainer.getCellCache().get(edge.getDestCellId());
-				//TODO one line (4all)
-				Map<String, List<Tuple<Object,Integer>>> v1 = updateNeighborhoodVector(destVertex);
-				destVertex.setNeighborhoodVector(v1);
+				destVertex.setNeighborhoodVector(updateNeighborhoodVector(destVertex));
 				cell1HopList.add(destVertex);
 								
 				for (ImgEdge edge2H : destVertex.getEdges()){ 			//Get 2 hops edges
 					if (edge2H.getDestCellId() != vertex.getId()) { 	//Do not go back on the original vertex
 						dest2HVertex = (ImgVertex) CacheContainer.getCellCache().get(edge2H.getDestCellId());
-						//TODO
-						Map<String, List<Tuple<Object,Integer>>> v2 = updateNeighborhoodVector(dest2HVertex);
-						dest2HVertex.setNeighborhoodVector(v2);
+						dest2HVertex.setNeighborhoodVector(updateNeighborhoodVector(dest2HVertex));
 						cell2HopList.add(dest2HVertex);
 					}
 				}
@@ -71,9 +67,8 @@ public class NeighborhoodVector implements Serializable{
 			//Add original cell information
 			for (String key : vertex.getAttributeKeys()){
 				List<Tuple<Object,Integer>> list = new ArrayList<Tuple<Object,Integer>>();
-				Tuple<Object,Integer> tuple = new Tuple<Object,Integer>(vertex.getAttribute(key), 100);
 				//TODO
-				list.add(tuple);
+				list.add(new Tuple<Object,Integer>(vertex.getAttribute(key), 100));
 				vector.put(key, list);
 			}
 			//Add 1 Hop cells information
