@@ -1,5 +1,7 @@
 package com.imgraph;
 
+import gnu.trove.map.TIntObjectMap;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -644,6 +646,9 @@ public class BasicConsole {
 						//Save edges
 						List<ImgEdge> savedEdges = ((ImgVertex) ImgraphGraph.getInstance().getRawGraph().retrieveCell(id)).getEdges();
 						
+						//Save attributes
+						TIntObjectMap<Object> attributes = ImgraphGraph.getInstance().getRawGraph().retrieveCell(id).getAttributes();
+						
 						//Remove the cell
 						graph.startTransaction();
 						((ImgVertex) ImgraphGraph.getInstance().getRawGraph().retrieveCell(id)).remove();
@@ -680,7 +685,7 @@ public class BasicConsole {
 							}
 							
 							//Create the vertice with its edges on the target machine.
-							TestTools.genVertice(newId, savedEdges);
+							TestTools.genVertice(newId, savedEdges, attributes);
 							
 							socket.close();
 						}finally {

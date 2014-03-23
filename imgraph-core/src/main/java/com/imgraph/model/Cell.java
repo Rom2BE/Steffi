@@ -64,6 +64,10 @@ public abstract class Cell implements Serializable {
 		return ImgGraph.getInstance().getItemNameIndex(key);
 	}
 	
+	public TIntObjectMap<Object> getAttributes() {
+		return attributes;
+	}
+	
 	public void putAttributes(TIntObjectMap<Object> attributes) {
 		getAndInitAttributes().putAll(attributes);
 	}

@@ -1,5 +1,7 @@
 package com.imgraph.testing;
 
+import gnu.trove.map.TIntObjectMap;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -176,14 +178,14 @@ public class TestTools {
 		}
 	}
 	
-	public static void genVertice(long id, List<ImgEdge> edges){
+	public static void genVertice(long id, List<ImgEdge> edges, TIntObjectMap<Object> attributes){
 		ImgraphGraph graph = ImgraphGraph.getInstance();
-		graph.registerItemName("Name");
-
+		
 		if (graph.getRawGraph().retrieveCell(id) == null){
 			graph.startTransaction();
-			Vertex vertex = graph.addVertex(id);
-			vertex.setProperty("Name", "Vertex "+id);
+			
+			ImgVertex vertex = graph.getRawGraph().addVertex(id, "Vertex "+id);
+			vertex.putAttributes(attributes);
 			graph.stopTransaction(Conclusion.SUCCESS);
 			System.out.println("ID "+id+", stored @ " + StorageTools.getCellAddress(id));
 		}
