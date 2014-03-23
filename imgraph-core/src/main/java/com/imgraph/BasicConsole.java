@@ -106,7 +106,6 @@ public class BasicConsole {
 		}
 		//FIXME
 		
-		//TODO check input
 		while (true) {
 			System.out.println("\nWaiting for your command :");
 			command = IOUtils.readLine(">");
@@ -218,10 +217,20 @@ public class BasicConsole {
 				
 				//Print Machines
 				int i = 1;
+				int machineCount = 0;
+				int totalCount = 0;
+				Map<String, Integer> cellCount = StorageTools.countCellsInCluster();
 				for (Address address : CacheContainer.getCacheContainer().getTransport().getMembers()){
-					System.out.println("Machine "+i+"'s Address : "+ address.toString()+", IpAddress : "+StorageTools.getIpAddress(address));
+					for (Entry<String, Integer> entry : cellCount.entrySet()) {
+						if (entry.getKey().equals(address.toString()))
+							machineCount = entry.getValue();
+					}
+					System.out.println("Machine "+i+"'s Address : "+ address.toString()+", \t IpAddress : "+StorageTools.getIpAddress(address)+"\t "+machineCount+" cells.");
+					totalCount += machineCount;
 					i++;
 				}
+				System.out.println("Total Count = " + totalCount);
+				
 			} else if (command.equals("printPortals")) {
 				int vertexCounter = 0;
 				int portalCounter = 0;
@@ -595,7 +604,7 @@ public class BasicConsole {
 				for (long i=1; i<11; i++){
 					System.out.println(StorageTools.getCellAddress(i));
 				}
-			} else if (command.equals("move")) { //TODO move
+			} else if (command.equals("move")) {
 				try {			
 					boolean correctInput = true;
 					boolean existingVertex = true;
