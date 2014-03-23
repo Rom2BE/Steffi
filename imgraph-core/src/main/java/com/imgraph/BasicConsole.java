@@ -441,28 +441,107 @@ public class BasicConsole {
 				}
 			} else if (command.equals("genVertices")) {
 				try {					
-					long numVertices = Long.parseLong(IOUtils.readLine("Number of vertices: "));
-					long minId = Long.parseLong(IOUtils.readLine("Minimum id: "));
-					long maxId = Long.parseLong(IOUtils.readLine("Maximum id: "));
-					TestTools.genVertices(minId, maxId, numVertices);
+					boolean correctInput = true;
+					boolean correctRange = true;
+					long numVertices = 0;
+					long minId = 0;
+					long maxId = 0;
+					
+					command = IOUtils.readLine("Number of vertices: ");
+					if (isNumeric(command))
+						numVertices = Long.parseLong(command);
+					else 
+						correctInput = false;
+					
+					if(correctInput){
+						command = IOUtils.readLine("Minimum id: ");
+						if (isNumeric(command))
+							minId = Long.parseLong(command);
+						else 
+							correctInput = false;
+					}
+					
+					if(correctInput){
+						command = IOUtils.readLine("Maximum id: ");
+						if (isNumeric(command)){
+							maxId = Long.parseLong(command);
+							if (maxId < minId)
+								correctRange = false;
+							else{
+								TestTools.genVertices(minId, maxId, numVertices);
+	
+								Map<String, Integer> cellCount = StorageTools.countCellsInCluster();
+								long totalCount = 0;
+								for (Entry<String, Integer> entry : cellCount.entrySet()) {
+									System.out.println("Machine " + entry.getKey() + ": " + entry.getValue() + " cells");
+									totalCount += entry.getValue();
+								}	
+								System.out.println("Total Count = " + totalCount);
+							}
+						}
+						else 
+							correctInput = false;
+					}
 
-					Map<String, Integer> cellCount = StorageTools.countCellsInCluster();
-					long totalCount = 0;
-					for (Entry<String, Integer> entry : cellCount.entrySet()) {
-						System.out.println("Machine " + entry.getKey() + ": " + entry.getValue() + " cells");
-						totalCount += entry.getValue();
-					}	
-					System.out.println("Total Count = " + totalCount);
+					if(!correctInput)
+						System.out.println("Incorrect Input");
+					if(!correctRange)
+						System.out.println("Incorrect Range");
+					
 				} catch (Exception ex) {
 					ex.printStackTrace();
 				}
 			} else if (command.equals("genEdges")) {
 				try {	
-					int numEdges = Integer.parseInt(IOUtils.readLine("Number of edges: "));
-					long minId = Long.parseLong(IOUtils.readLine("Minimum start vertex id: "));
-					long maxId = Long.parseLong(IOUtils.readLine("Maximum end vertex id: "));
-					boolean directed = IOUtils.readLine("Directed (Y/N): ").equals("Y");
-					TestTools.genEdges(minId, maxId, numEdges, directed);
+					boolean correctInput = true;
+					boolean correctRange = true;
+					boolean directed = true;
+					int numEdges = 0;
+					long minId = 0;
+					long maxId = 0;
+					
+					command = IOUtils.readLine("Number of edges: ");
+					if (isNumeric(command))
+						numEdges = Integer.parseInt(command);
+					else 
+						correctInput = false;
+					
+					if(correctInput){
+						command = IOUtils.readLine("Minimum start vertex id: ");
+						if (isNumeric(command))
+							minId = Long.parseLong(command);
+						else 
+							correctInput = false;
+					}
+					
+					if(correctInput){
+						command = IOUtils.readLine("Maximum end vertex id: ");
+						if (isNumeric(command)){
+							maxId = Long.parseLong(command);
+							if (maxId < minId)
+								correctRange = false;
+						}
+						else 
+							correctInput = false;
+					}
+					
+					if(correctRange){
+						if(correctInput){
+							command = IOUtils.readLine("Directed (Y/N): ");
+							if (command.matches("Y|N")){
+								directed = command.equals("Y");
+								TestTools.genEdges(minId, maxId, numEdges, directed);
+							}
+							else 
+								correctInput = false;
+						}
+						
+						if(!correctInput)
+							System.out.println("Incorrect Input");
+					}
+					else
+						System.out.println("Incorrect Range");
+					
 				} catch (Exception ex) {
 					ex.printStackTrace();
 				}
@@ -516,25 +595,52 @@ public class BasicConsole {
 				}
 			} else if (command.equals("move")) { //TODO move
 				try {			
+					boolean correctInput = true;
+					boolean existingVertex = true;
+					boolean existingMachine = true;
+					long id = 0;
+					int index = 0;
+					String machineName = "";
+					
 					//Choose which node to move
-					long id = Long.parseLong(IOUtils.readLine("Vertex Id : "));	
+					command = IOUtils.readLine("Vertex Id : ");
+					if (isNumeric(command)){
+						id = Long.parseLong(command);
+						if(ImgraphGraph.getInstance().getRawGraph().retrieveCell(id) == null)
+							existingVertex = false;
+					}
+					else 
+						correctInput = false;
+					
 					//Print Machines
 					Map<String, Integer> indexMap = graph.getRawGraph().getMemberIndexes();
 					for(Entry<String, Integer> entry : indexMap.entrySet()){
-						System.out.println("Machine "+entry.getValue()+"'s Address : "+ entry.getKey());
+						System.out.println("Index :  "+entry.getValue()+"\t Address : "+ entry.getKey());
 					}
+					
 					//Choose on which machine to move
-					int index = Integer.parseInt(IOUtils.readLine("Machine index : "));
-					String machineName = "";
-					for (Entry<String, Integer> entry : indexMap.entrySet()){
-						if (entry.getValue() == index)
-							machineName=entry.getKey();
+					command = IOUtils.readLine("Machine index : ");
+					if (isNumeric(command)){
+						index = Integer.parseInt(command);
+						for (Entry<String, Integer> entry : indexMap.entrySet()){
+							if (entry.getValue() == index)
+								machineName=entry.getKey();
+						}
+						if (machineName.equals(""))
+							existingMachine = false;
 					}
-					System.out.println("Vertex "+id+" will be moved to "+ machineName);
+					else 
+						correctInput = false;
 					
-					if(ImgraphGraph.getInstance().getRawGraph().retrieveCell(id) != null
-							&& !machineName.equals("")){
-					
+					if(!correctInput)
+						System.out.println("Incorrect Input.");
+					else if(!existingVertex)
+						System.out.println("The vertex " + id + " does not exist.");
+					else if (!existingMachine)
+						System.out.println("The machine " + index + " does not exist.");
+					else {
+						System.out.println("Vertex "+id+" will be moved to "+ machineName);
+						
 						//Save edges
 						List<ImgEdge> savedEdges = ((ImgVertex) ImgraphGraph.getInstance().getRawGraph().retrieveCell(id)).getEdges();
 						
@@ -582,17 +688,20 @@ public class BasicConsole {
 								socket.close();
 						}
 					}
-					else 
-						System.out.println("Bad input");
 				} catch (Exception ex) {
 					ex.printStackTrace();
 				}
 			} else if (command.equals("remove")) {
 				command  = IOUtils.readLine("Cell ID: ");
 				
-				graph.startTransaction();
-				((ImgVertex) ImgraphGraph.getInstance().getRawGraph().retrieveCell(Long.parseLong(command))).remove();
-				graph.commit();
+				if (isNumeric(command)){
+					graph.startTransaction();
+					((ImgVertex) ImgraphGraph.getInstance().getRawGraph().retrieveCell(Long.parseLong(command))).remove();
+					graph.commit();
+				}
+				else 
+					System.out.println("Incorrect Input");
+				
 			} else if (command.equals("getLVI")) { //TODO LocalVertexIds
 				Map<String, List<Long>> cellIds = TestTools.getCellsID();
 				for(Entry<String, List<Long>> entry : cellIds.entrySet()){
@@ -925,4 +1034,8 @@ public class BasicConsole {
 			}			
 		}
 	}	
+	
+	public static boolean isNumeric(String inputData) {
+		return inputData.matches("[0-9]+");
+	}
 }

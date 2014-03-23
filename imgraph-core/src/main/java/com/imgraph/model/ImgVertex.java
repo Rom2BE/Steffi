@@ -96,7 +96,6 @@ public class ImgVertex extends Cell {
 	
 	public void removeEdgeAddress(ImgEdge edge, String address) {
 		int addressIndex = ImgGraph.getInstance().getMemberIndex(address);
-		System.out.println("ImgVertex.removeEdgeAddress() int addressIndex : "+addressIndex+", address : "+address+", edge : "+edge);
 		edgesAddresses[addressIndex].remove(edge);
 	}
 	
@@ -202,10 +201,8 @@ public class ImgVertex extends Cell {
 		for (int i=0; i<edges.size(); i++)
 			edgesToRemove[i] = edges.get(i);
 		
-		for (ImgEdge edge : edgesToRemove){
-			System.out.println("ImgVertex.remove() ImgEdge edge : edgesToRemove "+ edge);
+		for (ImgEdge edge : edgesToRemove)
 			removeEdge(edge);
-		}
 		
 		CellTransactionThread.get().removeCell(this);
 	}

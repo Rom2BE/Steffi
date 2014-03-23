@@ -212,7 +212,10 @@ public class TestTools {
 					id = securityLoop;
 				}
 				else{
-					id = TestTools.nextLong(randomGen, maxId - minId) + minId;
+					if (minId == maxId)
+						id = minId;
+					else
+						id = TestTools.nextLong(randomGen, maxId - minId) + minId;
 					security++;
 				}
 				v = graph.getVertex(id); //check if this id is already used 
