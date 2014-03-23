@@ -60,7 +60,6 @@ public class NeighborhoodVector implements Serializable{
 						Map<String, List<Tuple<Object,Integer>>> v2 = updateNeighborhoodVector(dest2HVertex);
 						dest2HVertex.setNeighborhoodVector(v2);
 						cell2HopList.add(dest2HVertex);
-						
 					}
 				}
 			}
@@ -151,7 +150,6 @@ public class NeighborhoodVector implements Serializable{
 						if(tuple.getX().equals(cell.getAttribute(key))){
 							present = true;
 							tuple.setY(tuple.getY() + value);
-							//TODO Remove and add?
 						}
 					}
 					//Attribute never seen
@@ -176,7 +174,8 @@ public class NeighborhoodVector implements Serializable{
 			for (Tuple<Object, Integer> tuple : entry.getValue()){
 				neighboursList += "{"+tuple.getX()+","+tuple.getY()+"},";
 			}
-			neighboursList += "]"; //TODO substring to delete the last ,
+			neighboursList = neighboursList.substring(0, neighboursList.length()-1);
+			neighboursList += "]";
 		}
 		return neighboursList;
 	}
