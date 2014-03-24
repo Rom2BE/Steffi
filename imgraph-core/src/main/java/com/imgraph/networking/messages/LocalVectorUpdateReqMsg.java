@@ -13,6 +13,7 @@ public class LocalVectorUpdateReqMsg extends Message {
 	 */
 	private static final long serialVersionUID = 5415157323985027401L;
 	private List<Long> cellIds;
+	private boolean updateType; //True for full update, false for local update
 
 	public List<Long> getCellIds() {
 		return cellIds;
@@ -20,6 +21,14 @@ public class LocalVectorUpdateReqMsg extends Message {
 
 	public void setCellIds(List<Long> cellIds) {
 		this.cellIds = cellIds;
+	}
+	
+	public boolean getUpdateType() {
+		return updateType;
+	}
+
+	public void setUpdateType(boolean updateType) {
+		this.updateType = updateType;
 	}
 
 	public LocalVectorUpdateReqMsg() {

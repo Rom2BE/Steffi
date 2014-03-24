@@ -779,6 +779,25 @@ public class BasicConsole {
 				else 
 					System.out.println("Incorrect Input");
 				
+			} else if (command.equals("updateFullVector")) {
+				command  = IOUtils.readLine("Cell ID: ");
+				
+				if (isNumeric(command)){
+					NeighborhoodVector.updateFullNeighborhoodVector((ImgVertex) CacheContainer.getCellCache().get(Long.parseLong(command)));
+				}
+				else 
+					System.out.println("Incorrect Input");
+				
+			} else if (command.equals("updateLocalVector")) {
+				command  = IOUtils.readLine("Cell ID: ");
+				
+				if (isNumeric(command)){
+					ImgVertex vertex = (ImgVertex) CacheContainer.getCellCache().get(Long.parseLong(command));
+					vertex.setNeighborhoodVector(NeighborhoodVector.updateNeighborhoodVector(vertex));
+				}
+				else 
+					System.out.println("Incorrect Input");
+				
 			} else if (command.equals("getLVI")) { //TODO LocalVertexIds
 				Map<String, List<Long>> cellIds = TestTools.getCellsID();
 				for(Entry<String, List<Long>> entry : cellIds.entrySet()){

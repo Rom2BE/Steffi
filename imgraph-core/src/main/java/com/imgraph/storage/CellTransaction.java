@@ -235,10 +235,12 @@ public class CellTransaction {
 		for (Long id : cellList){
 			ImgVertex vertex = (ImgVertex) CacheContainer.getCellCache().get(id);
 			if (vertex != null){
-				if (StorageTools.getCellAddress(id).equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString()))
+				if (StorageTools.getCellAddress(id).equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString())){
 					NeighborhoodVector.updateFullNeighborhoodVector(vertex);//can be null
-				else
+				}
+				else{
 					distantIds.add(id);
+				}
 			}
 		}
 		
@@ -258,6 +260,8 @@ public class CellTransaction {
 					LocalVectorUpdateReqMsg message = new LocalVectorUpdateReqMsg();
 					
 					message.setCellIds(distantIds);
+					
+					message.setUpdateType(true);
 					
 					socket.send(Message.convertMessageToBytes(message), 0);
 					

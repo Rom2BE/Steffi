@@ -116,8 +116,13 @@ public abstract class CommandProcessor {
 			Cache<Long, Cell> cache = CacheContainer.getCellCache();
 			for (Long cellId : reqMsg.getCellIds()){
 				//Cell stored on this machine
-				if (StorageTools.getCellAddress(cellId).equals(cache.getCacheManager().getAddress().toString()))
-					NeighborhoodVector.updateFullNeighborhoodVector((ImgVertex) cache.get(cellId));					
+				if (StorageTools.getCellAddress(cellId).equals(cache.getCacheManager().getAddress().toString())){
+					ImgVertex vertex = (ImgVertex) cache.get(cellId);
+					if (reqMsg.getUpdateType())
+						NeighborhoodVector.updateFullNeighborhoodVector(vertex);
+					else
+						vertex.setNeighborhoodVector(NeighborhoodVector.updateNeighborhoodVector(vertex));						
+				}
 			}
 			Message response = new Message(MessageType.LOCAL_VECTOR_UPDATE_REP, "OK");
 			response.setBody("OK");

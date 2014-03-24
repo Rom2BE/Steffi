@@ -1,5 +1,6 @@
 package com.imgraph.index;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -7,10 +8,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.zeromq.ZMQ;
+
+import com.imgraph.common.Configuration;
 import com.imgraph.model.Cell;
 import com.imgraph.model.ImgEdge;
+import com.imgraph.model.ImgGraph;
 import com.imgraph.model.ImgVertex;
+import com.imgraph.networking.messages.LocalVectorUpdateReqMsg;
+import com.imgraph.networking.messages.Message;
 import com.imgraph.storage.CacheContainer;
+import com.imgraph.storage.StorageTools;
 
 public class NeighborhoodVector implements Serializable{
 
@@ -43,18 +51,31 @@ public class NeighborhoodVector implements Serializable{
 		 */
 		List<Cell> cell1HopList = new ArrayList<Cell>();
 		List<Cell> cell2HopList = new ArrayList<Cell>();
+		List<Long> distantIds = new ArrayList<Long>();
+		long id;
+		//TODO reduce complexity
 		if (vertex!=null){
 			ImgVertex destVertex;
 			ImgVertex dest2HVertex;
+			//String localAddress = CacheContainer.getCellCache().getCacheManager().getAddress().toString();
+			//Cache<Object, Object> cache = CacheContainer.getCellCache();
 			for (ImgEdge edge : vertex.getEdges()){ 					//Get 1 hop edges
-				destVertex = (ImgVertex) CacheContainer.getCellCache().get(edge.getDestCellId());
-				destVertex.setNeighborhoodVector(updateNeighborhoodVector(destVertex));
+				id = edge.getDestCellId();
+				destVertex = (ImgVertex) CacheContainer.getCellCache().get(id);
+				if (StorageTools.getCellAddress(id).equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString()))
+					destVertex.setNeighborhoodVector(updateNeighborhoodVector(destVertex));
+				else
+					distantIds.add(id);
 				cell1HopList.add(destVertex);
 								
 				for (ImgEdge edge2H : destVertex.getEdges()){ 			//Get 2 hops edges
 					if (edge2H.getDestCellId() != vertex.getId()) { 	//Do not go back on the original vertex
-						dest2HVertex = (ImgVertex) CacheContainer.getCellCache().get(edge2H.getDestCellId());
-						dest2HVertex.setNeighborhoodVector(updateNeighborhoodVector(dest2HVertex));
+						id = edge2H.getDestCellId();
+						dest2HVertex = (ImgVertex) CacheContainer.getCellCache().get(id);
+						if (StorageTools.getCellAddress(id).equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString()))
+							dest2HVertex.setNeighborhoodVector(updateNeighborhoodVector(dest2HVertex));
+						else
+							distantIds.add(id);
 						cell2HopList.add(dest2HVertex);
 					}
 				}
@@ -78,6 +99,42 @@ public class NeighborhoodVector implements Serializable{
 			vector = partialVectorUpdate(vector, cell2HopList, 25);
 			
 			vertex.setNeighborhoodVector(vector);
+			
+			/**
+			 * Update modified distant vertices
+			 */
+			Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
+			ZMQ.Socket socket = null;
+			ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
+			
+			try {
+				for (Entry<String, String> entry : clusterAddresses.entrySet()) {
+					//Only send this message to other machines
+					if(!entry.getKey().equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString())){
+						socket = context.socket(ZMQ.REQ);
+						
+						socket.connect("tcp://" + entry.getValue() + ":" + 
+								Configuration.getProperty(Configuration.Key.NODE_PORT));
+					
+						LocalVectorUpdateReqMsg message = new LocalVectorUpdateReqMsg();
+						
+						message.setCellIds(distantIds);
+						
+						message.setUpdateType(false);
+						
+						socket.send(Message.convertMessageToBytes(message), 0);
+						
+						Message.readFromBytes(socket.recv(0));
+						
+						socket.close();
+					}
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}finally {
+				if (socket !=null)
+					socket.close();
+			}
 		}	
 		
 		else
