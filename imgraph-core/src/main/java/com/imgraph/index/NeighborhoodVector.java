@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.infinispan.Cache;
 import org.zeromq.ZMQ;
 
 import com.imgraph.common.Configuration;
@@ -53,16 +54,16 @@ public class NeighborhoodVector implements Serializable{
 		List<Cell> cell2HopList = new ArrayList<Cell>();
 		List<Long> distantIds = new ArrayList<Long>();
 		long id;
-		//TODO reduce complexity
 		if (vertex!=null){
 			ImgVertex destVertex;
 			ImgVertex dest2HVertex;
-			//String localAddress = CacheContainer.getCellCache().getCacheManager().getAddress().toString();
-			//Cache<Object, Object> cache = CacheContainer.getCellCache();
+			
+			Cache<Long, Cell> cache = CacheContainer.getCellCache();
+			String localAddress = cache.getCacheManager().getAddress().toString();
 			for (ImgEdge edge : vertex.getEdges()){ 					//Get 1 hop edges
 				id = edge.getDestCellId();
-				destVertex = (ImgVertex) CacheContainer.getCellCache().get(id);
-				if (StorageTools.getCellAddress(id).equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString()))
+				destVertex = (ImgVertex) cache.get(id);
+				if (StorageTools.getCellAddress(id).equals(localAddress))
 					destVertex.setNeighborhoodVector(updateNeighborhoodVector(destVertex));
 				else
 					distantIds.add(id);
@@ -71,8 +72,8 @@ public class NeighborhoodVector implements Serializable{
 				for (ImgEdge edge2H : destVertex.getEdges()){ 			//Get 2 hops edges
 					if (edge2H.getDestCellId() != vertex.getId()) { 	//Do not go back on the original vertex
 						id = edge2H.getDestCellId();
-						dest2HVertex = (ImgVertex) CacheContainer.getCellCache().get(id);
-						if (StorageTools.getCellAddress(id).equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString()))
+						dest2HVertex = (ImgVertex) cache.get(id);
+						if (StorageTools.getCellAddress(id).equals(localAddress))
 							dest2HVertex.setNeighborhoodVector(updateNeighborhoodVector(dest2HVertex));
 						else
 							distantIds.add(id);
@@ -88,7 +89,6 @@ public class NeighborhoodVector implements Serializable{
 			//Add original cell information
 			for (String key : vertex.getAttributeKeys()){
 				List<Tuple<Object,Integer>> list = new ArrayList<Tuple<Object,Integer>>();
-				//TODO
 				list.add(new Tuple<Object,Integer>(vertex.getAttribute(key), 100));
 				vector.put(key, list);
 			}
@@ -110,7 +110,7 @@ public class NeighborhoodVector implements Serializable{
 			try {
 				for (Entry<String, String> entry : clusterAddresses.entrySet()) {
 					//Only send this message to other machines
-					if(!entry.getKey().equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString())){
+					if(!entry.getKey().equals(localAddress)){
 						socket = context.socket(ZMQ.REQ);
 						
 						socket.connect("tcp://" + entry.getValue() + ":" + 
@@ -141,7 +141,8 @@ public class NeighborhoodVector implements Serializable{
 			System.out.println("Vertex is null");
 		
 	}
-	//TODO one method
+
+	
 	public static Map<String, List<Tuple<Object,Integer>>> updateNeighborhoodVector(ImgVertex vertex){
 		/**
 		 * Get updated information
