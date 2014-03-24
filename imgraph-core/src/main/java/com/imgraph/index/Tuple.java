@@ -2,7 +2,7 @@ package com.imgraph.index;
 
 import java.io.Serializable;
 
-public class Tuple<X, Y> implements Serializable { 
+public class Tuple<X, Y> implements Serializable, Comparable{ 
 	
 	private static final long serialVersionUID = 205230036159116313L;
 	private X x; 
@@ -30,5 +30,10 @@ public class Tuple<X, Y> implements Serializable {
 	
 	public String toString(){
 		return "{"+x+","+y+"}";
+	}
+	
+	@Override
+	public int compareTo(Object tuple) {
+		return ((Integer) this.y).compareTo((Integer) ((Tuple) tuple).getY());
 	}
 } 

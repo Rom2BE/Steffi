@@ -5,6 +5,7 @@ import gnu.trove.map.TIntObjectMap;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -29,6 +30,7 @@ import com.imgraph.index.ImgIndex;
 import com.imgraph.index.ImgIndexHits;
 import com.imgraph.index.NeighborhoodVector;
 import com.imgraph.index.Tuple;
+import com.imgraph.index.TupleComparator;
 import com.imgraph.loader.LoadVertexInfo;
 import com.imgraph.loader.TextFileLoader;
 import com.imgraph.model.EdgeType;
@@ -280,11 +282,16 @@ public class BasicConsole {
 				 */
 				String valueIntensities = "";
 				for (Entry<String, Map<Object, List<Tuple<Long, Integer>>>> entry : attributesIndex.entrySet()){
-					System.out.println(entry.getKey() + ":");
+					System.out.println(entry.getKey() + ":");//Size
 					for (Entry<Object, List<Tuple<Long, Integer>>> attributeValue : entry.getValue().entrySet()){
-						System.out.print("\t"+attributeValue.getKey() + " : ");
+						System.out.print("\t"+attributeValue.getKey() + " : "); //184
 						valueIntensities = "[";
-						for(Tuple<Long, Integer> tuple : attributeValue.getValue()){
+						//Sort intensities in decreasing order
+						List<Tuple<Long, Integer>> tupleList = attributeValue.getValue();
+						//Sorting tuples on custom order defined by TupleComparator
+				        Collections.sort(tupleList,new TupleComparator());
+				      
+				        for(Tuple<Long, Integer> tuple : tupleList){
 							valueIntensities += tuple+", ";
 						}
 						valueIntensities = valueIntensities.substring(0, valueIntensities.length()-2);
