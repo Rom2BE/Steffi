@@ -286,7 +286,13 @@ public class TestTools {
 				do{
 					fullEdges = false;
 					idV1 = cellsId.get(new Random().nextInt(cellsId.size()));
-					if (((ImgVertex) graph.getRawGraph().retrieveCell(idV1)).getEdges().size() == range-1)
+					//Only take into account edges that connect vertices in the given range.
+					int edgeInRangeCounter = 0;
+					for (ImgEdge edge : ((ImgVertex) graph.getRawGraph().retrieveCell(idV1)).getEdges()){
+						if(edge.getDestCellId() >= minId && edge.getDestCellId() <= maxId)
+							edgeInRangeCounter++;
+					}
+					if (edgeInRangeCounter == range-1)
 						fullEdges=true;
 				}while (fullEdges);
 				
@@ -296,7 +302,14 @@ public class TestTools {
 					edgeAlreadyExist = false;
 					idV2 = cellsId.get(new Random().nextInt(cellsId.size()));
 					vertex = (ImgVertex) graph.getRawGraph().retrieveCell(idV2);
-					if (vertex.getEdges().size() == range-1)
+					//Only take into account edges that connect vertices in the given range.
+					int edgeInRangeCounter = 0;
+					for (ImgEdge edge : vertex.getEdges()){
+						if(edge.getDestCellId() >= minId && edge.getDestCellId() <= maxId)
+							edgeInRangeCounter++;
+					}
+					
+					if (edgeInRangeCounter == range-1)
 						fullEdges=true;
 					if (!fullEdges){
 						for(ImgEdge edge : vertex.getEdges()){
