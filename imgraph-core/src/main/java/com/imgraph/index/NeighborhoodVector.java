@@ -16,6 +16,7 @@ import com.imgraph.model.Cell;
 import com.imgraph.model.ImgEdge;
 import com.imgraph.model.ImgGraph;
 import com.imgraph.model.ImgVertex;
+import com.imgraph.networking.messages.LocalVectorUpdateRepMsg;
 import com.imgraph.networking.messages.LocalVectorUpdateReqMsg;
 import com.imgraph.networking.messages.Message;
 import com.imgraph.storage.CacheContainer;
@@ -24,9 +25,6 @@ import com.imgraph.storage.StorageTools;
 public class NeighborhoodVector implements Serializable{
 
 	
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 766758468137921169L;
 	private Map<String, List<Tuple<Object, Integer>>> vector;
 	
@@ -101,6 +99,15 @@ public class NeighborhoodVector implements Serializable{
 			vertex.setNeighborhoodVector(vector);
 			
 			/**
+			 * Update Indexes
+			 */
+			Map<Long, NeighborhoodVector> neighborhoodVectorMap = ImgGraph.getInstance().getNeighborhoodVectorMap();
+			neighborhoodVectorMap.put(vertex.getId(), new NeighborhoodVector(vector));
+			//TODO remove old values when removing vertices
+			//System.out.println("\nsetNeighborhoodVectorMap(neighborhoodVectorMap) in NeighborhoodVector");
+			ImgGraph.getInstance().setNeighborhoodVectorMap(neighborhoodVectorMap);
+			
+			/**
 			 * Update modified distant vertices
 			 */
 			Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
@@ -122,9 +129,14 @@ public class NeighborhoodVector implements Serializable{
 						
 						message.setUpdateType(false);
 						
+						message.setNeighborhoodVectorMap(neighborhoodVectorMap);
+						
 						socket.send(Message.convertMessageToBytes(message), 0);
 						
-						Message.readFromBytes(socket.recv(0));
+						LocalVectorUpdateRepMsg response = (LocalVectorUpdateRepMsg) Message.readFromBytes(socket.recv(0));
+						
+						//System.out.println("\nsetNeighborhoodVectorMap(response.getNeighborhoodVectorMap()) in NeighborhoodVector");
+						ImgGraph.getInstance().setNeighborhoodVectorMap(response.getNeighborhoodVectorMap());
 						
 						socket.close();
 					}
@@ -183,6 +195,14 @@ public class NeighborhoodVector implements Serializable{
 		//Add 2 Hops cells information
 		vector = partialVectorUpdate(vector, cell2HopList, 25);
 		
+		/**
+		 * Update Indexes
+		 */
+		Map<Long, NeighborhoodVector> neighborhoodVectorMap = ImgGraph.getInstance().getNeighborhoodVectorMap();
+		neighborhoodVectorMap.put(vertex.getId(), new NeighborhoodVector(vector));
+		//System.out.println("\nsetNeighborhoodVectorMap(neighborhoodVectorMap) in NeighborhoodVector");
+		ImgGraph.getInstance().setNeighborhoodVectorMap(neighborhoodVectorMap);
+		
 		return vector;
 	}
 
@@ -218,6 +238,13 @@ public class NeighborhoodVector implements Serializable{
 			}
 		}
 		return vector;
+	}
+	
+	public static Map<Long, NeighborhoodVector> removeIds(Map<Long, NeighborhoodVector> neighborhoodVectorMap, List<Long> removedIds){
+		for (Long id : removedIds){
+			neighborhoodVectorMap.remove(id);
+		}
+		return neighborhoodVectorMap;
 	}
 	
 	public String toString() {

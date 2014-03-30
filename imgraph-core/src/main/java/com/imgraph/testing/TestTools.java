@@ -237,7 +237,6 @@ public class TestTools {
 		}
 	}
 	
-	//TODO error when full edges
 	public static void genEdges(long minId, long maxId,
 			int numEdges, boolean directed) {
 		ImgraphGraph graph = ImgraphGraph.getInstance();
@@ -246,7 +245,7 @@ public class TestTools {
 		long idV2 = 0; //Id of the first vertex
 		boolean allFull = true; //Checking if all possible edges have already been created in the given range
 		boolean edgeAlreadyExist = false; //Checking if there is already an edge between V1 and V2
-		boolean fullEdges = false; //Checking if an vertex can create one more edge //TODO should only count edges of vertices in the range
+		boolean fullEdges = false; //Checking if an vertex can create one more edge
 		ImgVertex vertex = null;
 		
 		//Get vertices ID -> stored in cellsId

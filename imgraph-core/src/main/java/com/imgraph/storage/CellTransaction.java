@@ -20,11 +20,13 @@ import com.imgraph.common.Configuration;
 import com.imgraph.common.Configuration.Key;
 import com.imgraph.index.ImgIndex;
 import com.imgraph.index.NeighborhoodVector;
+import com.imgraph.index.Tuple;
 import com.imgraph.model.Cell;
 import com.imgraph.model.CellType;
 import com.imgraph.model.ImgEdge;
 import com.imgraph.model.ImgGraph;
 import com.imgraph.model.ImgVertex;
+import com.imgraph.networking.messages.LocalVectorUpdateRepMsg;
 import com.imgraph.networking.messages.LocalVectorUpdateReqMsg;
 import com.imgraph.networking.messages.Message;
 
@@ -185,6 +187,7 @@ public class CellTransaction {
 	public void commit() {
 		Cache<Long, Object> cache = CacheContainer.getCellCache();
 		List<Long> cellList = new ArrayList<Long>();
+		List<Tuple<Long, NeighborhoodVector>> removedInformation = new ArrayList<Tuple<Long, NeighborhoodVector>>();
 		TransactionManager tm = null;
 		Local2HopNeighborUpdater local2HNUpdater = null;
 		if (Configuration.getProperty(Key.USE_JTA_TRANSACTIONS).equals("true"))
@@ -202,10 +205,13 @@ public class CellTransaction {
 			}
 			
 			for (Long cellId : getRemovedCellIds()){
-				cellList.add(cellId);
+				Cell cell = (Cell) CacheContainer.getCellCache().get(cellId);
+				if (cell != null && cell.getCellType().equals(CellType.VERTEX))
+					removedInformation.add(new Tuple<Long, NeighborhoodVector>(cellId, ((ImgVertex) cell).getNeighborhoodVector()));
+				
 				cache.remove(cellId);
 			}
-
+			
 			local2HNUpdater = new Local2HopNeighborUpdater();
 			local2HNUpdater.update2HNList(transactionCells);
 			
@@ -227,6 +233,14 @@ public class CellTransaction {
 		closeTransaction();
 		
 		/**
+		 * Remove deleted cells
+		 */
+		for (Tuple<Long, NeighborhoodVector> tuple : removedInformation){
+			System.out.println("Remove the following tuple : " + tuple);
+			ImgGraph.getInstance().setNeighborhoodVectorMapRemove(tuple.getX(), tuple.getY());
+		}
+		
+		/**
 		 * Divide cellList depending on the machine the cell is stored
 		 *    - Stored on this machine : update its neighborhood vector
 		 *    - Otherwise : Send message to other machines to update their modified cells
@@ -236,7 +250,7 @@ public class CellTransaction {
 			ImgVertex vertex = (ImgVertex) CacheContainer.getCellCache().get(id);
 			if (vertex != null){
 				if (StorageTools.getCellAddress(id).equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString())){
-					NeighborhoodVector.updateFullNeighborhoodVector(vertex);//can be null
+					NeighborhoodVector.updateFullNeighborhoodVector(vertex);
 				}
 				else{
 					distantIds.add(id);
@@ -257,16 +271,22 @@ public class CellTransaction {
 					socket.connect("tcp://" + entry.getValue() + ":" + 
 							Configuration.getProperty(Configuration.Key.NODE_PORT));
 				
-					LocalVectorUpdateReqMsg message = new LocalVectorUpdateReqMsg();
+					LocalVectorUpdateReqMsg requestMessage = new LocalVectorUpdateReqMsg();
 					
-					message.setCellIds(distantIds);
+					requestMessage.setCellIds(distantIds);
 					
-					message.setUpdateType(true);
+					requestMessage.setUpdateType(true);
 					
-					socket.send(Message.convertMessageToBytes(message), 0);
+					requestMessage.setRemovedInformation(removedInformation);
 					
-					Message.readFromBytes(socket.recv(0));
+					requestMessage.setNeighborhoodVectorMap(ImgGraph.getInstance().getNeighborhoodVectorMap());	
+						
+					socket.send(Message.convertMessageToBytes(requestMessage), 0);
 					
+					LocalVectorUpdateRepMsg response = (LocalVectorUpdateRepMsg) Message.readFromBytes(socket.recv(0));
+					
+					ImgGraph.getInstance().setNeighborhoodVectorMap(response.getNeighborhoodVectorMap());
+
 					socket.close();
 				}
 			}

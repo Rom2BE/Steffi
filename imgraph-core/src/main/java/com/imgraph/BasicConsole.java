@@ -5,9 +5,7 @@ import gnu.trove.map.TIntObjectMap;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +28,6 @@ import com.imgraph.index.ImgIndex;
 import com.imgraph.index.ImgIndexHits;
 import com.imgraph.index.NeighborhoodVector;
 import com.imgraph.index.Tuple;
-import com.imgraph.index.TupleComparator;
 import com.imgraph.loader.LoadVertexInfo;
 import com.imgraph.loader.TextFileLoader;
 import com.imgraph.model.EdgeType;
@@ -243,63 +240,12 @@ public class BasicConsole {
 					i++;
 				}
 				System.out.println("Total Cell Count = " + totalCount); //TODO Edge Count
-				//TODO do not get information here but in an dynamic update
-				//FIXME Stop cheating and do it!
-				/**
-				 * Put information in the AttributeIndex
-				 */
-				Map<String, Map<Object, List<Tuple<Long, Integer>>>> attributesIndex = new HashMap<String, Map<Object, List<Tuple<Long, Integer>>>>();
+
+				//Print the attribute index
+				System.out.println(graph.getRawGraph().getAttributeIndex());
 				
-				//Each vertex has one NeighborhoodVector.
-				for (Entry<Long, NeighborhoodVector> entry : vectorsMap.entrySet()){
-					Map<String, List<Tuple<Object, Integer>>> vector = entry.getValue().getVector();
-					
-					//Each NeighborhoodVector is composed of a list of Tuple<Object, Integer>
-					for (Entry<String, List<Tuple<Object, Integer>>> attributeValue : vector.entrySet()){
-						//Get Size already saved
-						Map<Object, List<Tuple<Long, Integer>>> objectMapInAttributesMap = attributesIndex.get(attributeValue.getKey());
-						List<Tuple<Long, Integer>> tupleListInAttributesMap;
-						//Attribute seen for the first time
-						if (objectMapInAttributesMap == null)
-							objectMapInAttributesMap = new HashMap<Object, List<Tuple<Long, Integer>>>();
-						
-						for(Tuple<Object, Integer> tuple : attributeValue.getValue()){
-							tupleListInAttributesMap = objectMapInAttributesMap.get(tuple.getX());
-							//Value for this attribute seen for the first time
-							if (tupleListInAttributesMap == null)
-								tupleListInAttributesMap = new ArrayList<Tuple<Long, Integer>>();
-							
-							tupleListInAttributesMap.add(new Tuple<Long, Integer>(entry.getKey(), tuple.getY()));
-							objectMapInAttributesMap.put(tuple.getX(), tupleListInAttributesMap);
-						}
-						attributesIndex.put(attributeValue.getKey(), objectMapInAttributesMap);
-						
-					}
-				}
-				System.out.println("\nAttribute Index : ");
-				/**
-				 * Print information from the AttributeIndex
-				 */
-				String valueIntensities = "";
-				for (Entry<String, Map<Object, List<Tuple<Long, Integer>>>> entry : attributesIndex.entrySet()){
-					System.out.println(entry.getKey() + ":");//Size
-					for (Entry<Object, List<Tuple<Long, Integer>>> attributeValue : entry.getValue().entrySet()){
-						System.out.print("\t"+attributeValue.getKey() + " : "); //184
-						valueIntensities = "[";
-						//Sort intensities in decreasing order
-						List<Tuple<Long, Integer>> tupleList = attributeValue.getValue();
-						//Sorting tuples on custom order defined by TupleComparator
-				        Collections.sort(tupleList,new TupleComparator());
-				      
-				        for(Tuple<Long, Integer> tuple : tupleList){
-							valueIntensities += tuple+", ";
-						}
-						valueIntensities = valueIntensities.substring(0, valueIntensities.length()-2);
-						valueIntensities += "]";
-						System.out.println(valueIntensities);
-					}
-				}
-				
+			} else if (command.equals("printNV")) {
+				System.out.println(ImgGraph.getInstance().getNeighborhoodVectorMap());
 			} else if (command.equals("printPortals")) {
 				int vertexCounter = 0;
 				int portalCounter = 0;
@@ -775,7 +721,7 @@ public class BasicConsole {
 				} catch (Exception ex) {
 					ex.printStackTrace();
 				}
-			} else if (command.equals("remove")) {
+			} else if (command.equals("remove")) { //TODO check if vertex exists.
 				command  = IOUtils.readLine("Cell ID: ");
 				
 				if (isNumeric(command)){
@@ -856,6 +802,180 @@ public class BasicConsole {
 					e.printStackTrace();
 				}
 				
+			} else if (command.equals("genTest")) {
+				graph.registerItemName("Name");
+				graph.registerItemName("Size");
+				graph.registerItemName("Weight");
+				graph.registerItemName("Friend");
+				
+				graph.startTransaction();
+				
+				//Create vertices
+				ImgVertex v25 = graph.getRawGraph().addVertex(25L, "Vertex 25");
+				v25.putAttribute("Weight", 107);
+				v25.putAttribute("Size", 215);
+				
+				ImgVertex v93 = graph.getRawGraph().addVertex(93L, "Vertex 93");
+				v93.putAttribute("Weight", 81);
+				v93.putAttribute("Size", 163);
+
+				ImgVertex v66 = graph.getRawGraph().addVertex(66L, "Vertex 66");
+				v66.putAttribute("Weight", 97);
+				v66.putAttribute("Size", 194);
+				
+				ImgVertex v59 = graph.getRawGraph().addVertex(59L, "Vertex 59");
+				v59.putAttribute("Weight", 66);
+				v59.putAttribute("Size", 133);
+				
+				//Create edges
+				v25.addEdge(v93, false, "Friend");
+				v66.addEdge(v93, false, "Friend");
+				v59.addEdge(v93, false, "Friend");
+				v59.addEdge(v66, false, "Friend");
+				
+				graph.stopTransaction(Conclusion.SUCCESS);
+				
+				System.out.println("Attributes : ");
+				for (String attribute : v93.getAttributeKeys()){
+					System.out.println(attribute + " : " + v93.getAttribute(attribute));
+				}
+				
+				String result = "93 is connected to {";
+				List<Long> oneHop = new ArrayList<Long>();
+				List<Long> twoHop = new ArrayList<Long>();
+				for(ImgEdge edge : v93.getEdges()) {					//Connected To
+					oneHop.add(edge.getDestCellId());
+					
+					for (ImgEdge twoHopEdges : ((ImgVertex) ImgraphGraph.getInstance().getRawGraph().retrieveCell(edge.getDestCellId())).getEdges()){
+						if(twoHopEdges.getDestCellId() != 93){
+							twoHop.add(twoHopEdges.getDestCellId());
+						}
+					}
+				}
+				System.out.println(result+"1H : "+oneHop+", 2H : "+twoHop+"}");	
+								
+				//Direct links -50
+				System.out.println("\nDirect Links 1H : -50 attribute's values of 93 (a,b,c) :");	
+				for(Long id : oneHop){
+					System.out.println("93 -> " + id + ", 1H");
+				}
+				
+				//Direct links -25
+				System.out.println("\nDirect Links 2H : -25 attribute's values of 93 (D1,D2) :");
+				for(Long id : twoHop){
+					System.out.println("93 -> " + id + ", 2H");
+				}
+				
+				//Undirect links -25
+				System.out.println("\nUndirect Links 2H : -25 attribute's values of between them (A,B,C) :");
+				List<Long> idAlreadyDone = new ArrayList<Long>();
+				List<Tuple<Long, Long>> undirectLinks = new ArrayList<Tuple<Long, Long>>();
+				for(Long id : oneHop){
+					idAlreadyDone.add(id);
+					for(Long id25 : oneHop){
+						if (!idAlreadyDone.contains(id25)){
+							System.out.println(id+" -> " + id25 + ", 2H");
+							undirectLinks.add(new Tuple<Long, Long>(id, id25));
+						}
+					}
+				}
+				
+				System.out.println("BEFORE : ");
+				System.out.println(ImgGraph.getInstance().getAttributeIndex());
+				
+				Map<String, List<Tuple<Object, Integer>>> vector = v93.getNeighborhoodVector().getVector();
+				Map<String, Map<Object, List<Tuple<Long, Integer>>>> attributeIndex = ImgGraph.getInstance().getAttributeIndex().getAttributeIndex();
+				Map<String, Map<Object, List<Tuple<Long, Integer>>>> newAttributeIndex = ImgGraph.getInstance().getAttributeIndex().getAttributeIndex();
+				
+				for (Entry<String, Map<Object, List<Tuple<Long, Integer>>>> attributeIndexEntry : attributeIndex.entrySet()){
+					
+					//Check if there are values (Object) in this attribute (String) we need to remove
+					if(vector.keySet().contains(attributeIndexEntry.getKey())){
+						
+						boolean attributeIndexEntryModified = false;
+						List<Object> objectRemoved = new ArrayList<Object>();
+						
+						for (Entry<Object, List<Tuple<Long, Integer>>> attributeIndexEntryValue : attributeIndexEntry.getValue().entrySet()){
+							
+							//Check if this value (Object) is present in the removed vertex
+							boolean present = false;
+							for (Tuple<Object, Integer> tuple : vector.get(attributeIndexEntry.getKey())){
+								if (tuple.getX().equals(attributeIndexEntryValue.getKey()))
+									present = true;
+							}
+							
+							
+							boolean removed = false;
+							List<Tuple<Long, Integer>> tupleRemoved = new ArrayList<Tuple<Long, Integer>>();
+							if (present){
+								//Search after Symmetric Direct Links
+								for (String attribute : v93.getAttributeKeys()){
+									if (attribute.equals(attributeIndexEntry.getKey())){
+										if (v93.getAttribute(attribute).equals(attributeIndexEntryValue.getKey())){
+											for (Tuple<Long, Integer> tuple : attributeIndexEntryValue.getValue()){
+												if (oneHop.contains(tuple.getX()))
+													tuple.setY(tuple.getY() - 50);
+												if (twoHop.contains(tuple.getX()))
+													tuple.setY(tuple.getY() - 25);
+												if (tuple.getY() == 0)
+													tupleRemoved.add(tuple);
+											}
+										}
+										else{
+											int i = 0;
+											long firstId = 0;
+											for (Tuple<Long, Integer> tuple : attributeIndexEntryValue.getValue()){
+												if (i == 0){
+													firstId = tuple.getX();
+												}
+												if (!tuple.getX().equals(v93.getId())){
+													for (Tuple<Long, Long> undirectLinksTuple : undirectLinks){
+														if(undirectLinksTuple.getX().equals(firstId) && undirectLinksTuple.getY().equals(tuple.getX()))
+															tuple.setY(tuple.getY() - 25);
+														else if(undirectLinksTuple.getY().equals(firstId) && undirectLinksTuple.getX().equals(tuple.getX()))
+															tuple.setY(tuple.getY() - 25);
+														if (tuple.getY() == 0)
+															tupleRemoved.add(tuple);
+													}
+												}
+												i++;
+											}
+										}
+									}
+								}
+
+								//Search after possible tuple to remove
+								for (Tuple<Long, Integer> tuple : attributeIndexEntryValue.getValue()){
+									if (tuple.getX().equals(v93.getId())){
+										tupleRemoved.add(tuple);
+										removed = true;
+									}
+								}
+							}		
+							
+							//Process these removals
+							if (removed){
+								attributeIndexEntryModified = true;
+								for (Tuple<Long, Integer> tuple : tupleRemoved){
+									attributeIndexEntryValue.getValue().remove(tuple);
+								}
+								if (attributeIndexEntryValue.getValue().size() == 0)
+									objectRemoved.add(attributeIndexEntryValue.getKey());
+							}
+						}
+						
+						for (Object objectToRemove : objectRemoved)
+							attributeIndexEntry.getValue().remove(objectToRemove);
+						
+						if (attributeIndexEntryModified){
+							newAttributeIndex.put(attributeIndexEntry.getKey(), attributeIndexEntry.getValue());
+						}
+					}
+				}
+				ImgGraph.getInstance().getAttributeIndex().setAttributeIndex(newAttributeIndex);
+				
+				System.out.println("AFTER : ");
+				System.out.println(ImgGraph.getInstance().getAttributeIndex());
 			} else if (command.equals("genTestFile")) {
 				try {
 					String fileName = IOUtils.readLine("Output file: ");

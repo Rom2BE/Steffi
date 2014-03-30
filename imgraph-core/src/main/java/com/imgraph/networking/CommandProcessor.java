@@ -8,7 +8,9 @@ import java.util.List;
 import org.infinispan.Cache;
 import org.zeromq.ZMQ.Socket;
 
+import com.imgraph.index.AttributeIndex;
 import com.imgraph.index.NeighborhoodVector;
+import com.imgraph.index.Tuple;
 import com.imgraph.model.Cell;
 import com.imgraph.model.CellType;
 import com.imgraph.model.ImgGraph;
@@ -20,6 +22,7 @@ import com.imgraph.networking.messages.ClusterAddressesRep;
 import com.imgraph.networking.messages.IdentifiableMessage;
 import com.imgraph.networking.messages.LocalNeighborsRepMsg;
 import com.imgraph.networking.messages.LocalNeighborsReqMsg;
+import com.imgraph.networking.messages.LocalVectorUpdateRepMsg;
 import com.imgraph.networking.messages.LocalVectorUpdateReqMsg;
 import com.imgraph.networking.messages.LocalVertexIdRepMsg;
 import com.imgraph.networking.messages.LocalVertexIdReqMsg;
@@ -113,6 +116,18 @@ public abstract class CommandProcessor {
 	public static void processLocalVectorUpdateRequest(Socket socket,
 			LocalVectorUpdateReqMsg reqMsg) throws IOException {
 		if(reqMsg != null){
+			//Get the local NeighborhoodVectorMap
+			//Map<Long, NeighborhoodVector> localNVM = ImgGraph.getInstance().getNeighborhoodVectorMap();
+			
+			//Remove deleted cells
+			if (reqMsg.getRemovedInformation() != null){
+				for (Tuple<Long, NeighborhoodVector> tuple : reqMsg.getRemovedInformation())
+					ImgGraph.getInstance().setNeighborhoodVectorMapRemove(tuple.getX(), tuple.getY());
+			}
+
+			//Merge
+			ImgGraph.getInstance().setNeighborhoodVectorMap(AttributeIndex.mergeNeighborhoodVectorMap (reqMsg.getNeighborhoodVectorMap(), ImgGraph.getInstance().getNeighborhoodVectorMap()));
+
 			Cache<Long, Cell> cache = CacheContainer.getCellCache();
 			for (Long cellId : reqMsg.getCellIds()){
 				//Cell stored on this machine
@@ -124,8 +139,11 @@ public abstract class CommandProcessor {
 						vertex.setNeighborhoodVector(NeighborhoodVector.updateNeighborhoodVector(vertex));						
 				}
 			}
-			Message response = new Message(MessageType.LOCAL_VECTOR_UPDATE_REP, "OK");
-			response.setBody("OK");
+			
+			LocalVectorUpdateRepMsg response = new LocalVectorUpdateRepMsg("OK");
+			
+			response.setNeighborhoodVectorMap(ImgGraph.getInstance().getNeighborhoodVectorMap());
+			
 			socket.send(Message.convertMessageToBytes(response), 0);
 		}
 		else

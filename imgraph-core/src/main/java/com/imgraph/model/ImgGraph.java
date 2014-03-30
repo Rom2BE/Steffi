@@ -7,6 +7,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -20,8 +21,10 @@ import org.zeromq.ZMQ;
 
 import com.imgraph.common.Configuration;
 import com.imgraph.common.Configuration.Key;
+import com.imgraph.index.AttributeIndex;
 import com.imgraph.index.ImgIndex;
 import com.imgraph.index.ImgMapIndex;
+import com.imgraph.index.NeighborhoodVector;
 import com.imgraph.loader.ResponseProcessor;
 import com.imgraph.networking.NodeClients;
 import com.imgraph.networking.messages.IdentifiableMessage;
@@ -44,7 +47,8 @@ public class ImgGraph implements Serializable {
 	 */
 	private static final long serialVersionUID = -3640095076173432800L;
 	
-	
+	private Map<Long, NeighborhoodVector> mapNeighborhoodVector;
+	private AttributeIndex attributeIndex;
 	private ImgIndex<ImgVertex> vertexIndex;
 	private ImgIndex<ImgEdge> edgeIndex;
 	private boolean serializedCells;
@@ -76,7 +80,8 @@ public class ImgGraph implements Serializable {
 	
 	private ImgGraph() {
 		context = ZMQ.context(1);
-
+		mapNeighborhoodVector = new TreeMap<Long, NeighborhoodVector>();
+		attributeIndex = new AttributeIndex();
 		vertexIndex = new ImgMapIndex<ImgVertex>(CacheContainer.VERTEX_INDEX_CACHE_NAME, ImgVertex.class, false);
 		edgeIndex = new ImgMapIndex<ImgEdge>(CacheContainer.EDGE_INDEX_CACHE_NAME, ImgEdge.class, false);
 		serializedCells = Configuration.getProperty(Key.STORE_SERIALIZED_CELLS).equals("true");
@@ -96,6 +101,36 @@ public class ImgGraph implements Serializable {
 	
 	private boolean isLocalCell(long cellId) {
 		return StorageTools.getCellAddress(cellId).equals(localAddress);
+	}
+	
+	public Map<Long, NeighborhoodVector> getNeighborhoodVectorMap(){
+		return mapNeighborhoodVector;
+	}
+	
+	public void setNeighborhoodVectorMap(Map<Long, NeighborhoodVector> mapNeighborhoodVector){
+		this.mapNeighborhoodVector = mapNeighborhoodVector;
+		AttributeIndex.updateAttributeIndex();
+	}
+	
+	//Needs : ID, NeighborhoodVector
+	public void setNeighborhoodVectorMapRemove(Long id, NeighborhoodVector neighborhoodVector){
+		//Update NeighborhoodVector
+		Map<Long, NeighborhoodVector> mapNeighborhoodVector = this.mapNeighborhoodVector;
+		mapNeighborhoodVector.remove(id); 
+		this.mapNeighborhoodVector = mapNeighborhoodVector;
+		
+		//Update AttributeIndex
+		System.out.println("BEFORE REMOVAL : " + ImgGraph.getInstance().getAttributeIndex());
+		AttributeIndex.removeOldIdsAttributeIndex(id, neighborhoodVector); 
+		System.out.println("AFTER REMOVAL : " + ImgGraph.getInstance().getAttributeIndex());
+	}
+	
+	public AttributeIndex getAttributeIndex(){
+		return attributeIndex;
+	}
+	
+	public void setAttributeIndex(AttributeIndex attributeIndex){
+		this.attributeIndex = attributeIndex;
 	}
 	
 	public <T extends Cell> ImgIndex<T> getIndex(String indexName, Class<T> className) {
