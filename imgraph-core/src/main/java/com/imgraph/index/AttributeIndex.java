@@ -11,7 +11,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import com.imgraph.model.ImgEdge;
 import com.imgraph.model.ImgGraph;
+import com.imgraph.model.ImgVertex;
+import com.imgraph.storage.CacheContainer;
 
 /**
  * @author Romain Capron
@@ -150,6 +153,203 @@ public class AttributeIndex implements Serializable {
 		}
 		System.out.println("RESULT = " + result);
 		ImgGraph.getInstance().getAttributeIndex().setAttributeIndex(result);
+	}
+	
+	public static List<Tuple<Long, Map<String, List<Tuple<Object, Integer>>>>> updateList(Long id, String attribute, Object value, int modification, List<Tuple<Long, Map<String, List<Tuple<Object, Integer>>>>> list){
+		
+		boolean vertexFound = false;
+		for(Tuple<Long, Map<String, List<Tuple<Object, Integer>>>> tuple : list){
+			
+			//Vertex Found
+			if (tuple.getX().equals(id)){
+				vertexFound = true;
+				
+				boolean attributeFound = false;
+				for (Entry<String, List<Tuple<Object, Integer>>> attributeSaved : tuple.getY().entrySet()){
+					
+					//Attribute Found
+					if (attributeSaved.getKey().equals(attribute)){
+						attributeFound = true;
+						
+						boolean valueFound = false;
+						for (Tuple<Object, Integer> t : attributeSaved.getValue()){
+							
+							//Value Found
+							if (t.getX().equals(value)){
+								valueFound = true;
+								t.setY(t.getY() + modification); 
+							}
+						}
+						
+						//Never seen this value
+						if (!valueFound)
+							attributeSaved.getValue().add(new Tuple<Object, Integer>(value, modification));					
+					}
+					
+				}
+				
+				//Never seen this attribute
+				if (!attributeFound){
+					List<Tuple<Object, Integer>> newList = new ArrayList<Tuple<Object, Integer>>();
+					newList.add(new Tuple<Object, Integer>(value, modification));
+					tuple.getY().put(attribute, newList);
+				}
+			}
+		}
+		
+		//Never seen this vertex
+		if (!vertexFound){
+			List<Tuple<Object, Integer>> valuesList = new ArrayList<Tuple<Object, Integer>>();
+			
+			valuesList.add(new Tuple<Object, Integer>(value, modification));
+			
+			Map<String, List<Tuple<Object, Integer>>> attributesMap = new HashMap<String, List<Tuple<Object, Integer>>>();
+			
+			attributesMap.put(attribute, valuesList); 
+					
+			list.add(new Tuple<Long, Map<String, List<Tuple<Object, Integer>>>>(id, attributesMap));
+		}
+		
+		return list;
+	}
+	
+	public static List<Tuple<Long, Map<String, List<Tuple<Object, Integer>>>>> updateRemovedVertices(ImgVertex vertex){
+		List<Tuple<Long, Map<String, List<Tuple<Object, Integer>>>>> modificationsSaved = new ArrayList<Tuple<Long, Map<String, List<Tuple<Object, Integer>>>>>();
+		
+		List<Long> oneHop = new ArrayList<Long>();
+		List<Long> twoHop = new ArrayList<Long>();
+		for(ImgEdge edge : vertex.getEdges()) {					
+			oneHop.add(edge.getDestCellId());
+			
+			for (ImgEdge twoHopEdges : ((ImgVertex) ImgGraph.getInstance().retrieveCell(edge.getDestCellId())).getEdges()){
+				if(twoHopEdges.getDestCellId() != vertex.getId()){
+					twoHop.add(twoHopEdges.getDestCellId());
+				}
+			}
+		}
+		
+		List<Long> idAlreadyDone = new ArrayList<Long>();
+		List<Tuple<Long, Long>> undirectLinks = new ArrayList<Tuple<Long, Long>>();
+		for(Long id : oneHop){
+			idAlreadyDone.add(id);
+			for(Long id25 : oneHop){
+				if (!idAlreadyDone.contains(id25)){
+					undirectLinks.add(new Tuple<Long, Long>(id, id25));
+				}
+			}
+		}
+		
+		Map<String, List<Tuple<Object, Integer>>> vector = vertex.getNeighborhoodVector().getVector();
+		Map<String, Map<Object, List<Tuple<Long, Integer>>>> attributeIndex = ImgGraph.getInstance().getAttributeIndex().getAttributeIndex();
+		Map<String, Map<Object, List<Tuple<Long, Integer>>>> newAttributeIndex = ImgGraph.getInstance().getAttributeIndex().getAttributeIndex();
+		
+		for (Entry<String, Map<Object, List<Tuple<Long, Integer>>>> attributeIndexEntry : attributeIndex.entrySet()){
+			
+			//Check if there are values (Object) in this attribute (String) we need to remove
+			if(vector.keySet().contains(attributeIndexEntry.getKey())){
+				
+				boolean attributeIndexEntryModified = false;
+				List<Object> objectRemoved = new ArrayList<Object>();
+				
+				for (Entry<Object, List<Tuple<Long, Integer>>> attributeIndexEntryValue : attributeIndexEntry.getValue().entrySet()){
+					
+					//Check if this value (Object) is present in the removed vertex
+					boolean present = false;
+					for (Tuple<Object, Integer> tuple : vector.get(attributeIndexEntry.getKey())){
+						if (tuple.getX().equals(attributeIndexEntryValue.getKey()))
+							present = true;
+					}
+					
+					
+					boolean removed = false;
+					List<Tuple<Long, Integer>> tupleRemoved = new ArrayList<Tuple<Long, Integer>>();
+					if (present){
+						//Search after Symmetric Direct Links
+						for (String attribute : vertex.getAttributeKeys()){
+							if (attribute.equals(attributeIndexEntry.getKey())){
+								if (vertex.getAttribute(attribute).equals(attributeIndexEntryValue.getKey())){
+									for (Tuple<Long, Integer> tuple : attributeIndexEntryValue.getValue()){
+										if (oneHop.contains(tuple.getX())){
+											tuple.setY(tuple.getY() - 50); //TODO
+											modificationsSaved = updateList(tuple.getX(), attribute, attributeIndexEntryValue.getKey(), -50, modificationsSaved);
+										}
+										if (twoHop.contains(tuple.getX())){
+											tuple.setY(tuple.getY() - 25); //TODO
+											modificationsSaved = updateList(tuple.getX(), attribute, attributeIndexEntryValue.getKey(), -25, modificationsSaved);
+										}
+										if (tuple.getY() == 0)
+											tupleRemoved.add(tuple);
+									}
+								}
+								else{
+									int i = 0;
+									long firstId = 0;
+									for (Tuple<Long, Integer> tuple : attributeIndexEntryValue.getValue()){
+										if (i == 0){
+											firstId = tuple.getX();
+										}
+										if (!tuple.getX().equals(vertex.getId())){
+											for (Tuple<Long, Long> undirectLinksTuple : undirectLinks){
+												if(undirectLinksTuple.getX().equals(firstId) && undirectLinksTuple.getY().equals(tuple.getX())){
+													tuple.setY(tuple.getY() - 25); //TODO
+													modificationsSaved = updateList(tuple.getX(), attribute, attributeIndexEntryValue.getKey(), -25, modificationsSaved);
+												}
+												else if(undirectLinksTuple.getY().equals(firstId) && undirectLinksTuple.getX().equals(tuple.getX())){
+													tuple.setY(tuple.getY() - 25); //TODO
+													modificationsSaved = updateList(tuple.getX(), attribute, attributeIndexEntryValue.getKey(), -25, modificationsSaved);	
+												}
+												if (tuple.getY() == 0)
+													tupleRemoved.add(tuple);
+											}
+										}
+										i++;
+									}
+								}
+							}
+						}
+
+						//Search after possible tuple to remove
+						for (Tuple<Long, Integer> tuple : attributeIndexEntryValue.getValue()){
+							if (tuple.getX().equals(vertex.getId())){
+								tupleRemoved.add(tuple); //TODO
+								modificationsSaved = updateList(tuple.getX(), attributeIndexEntry.getKey(), attributeIndexEntryValue.getKey(), -tuple.getY(), modificationsSaved);
+								removed = true;
+							}
+						}
+					}		
+					
+					//Process these removals
+					if (removed){
+						attributeIndexEntryModified = true;
+						for (Tuple<Long, Integer> tuple : tupleRemoved){
+							attributeIndexEntryValue.getValue().remove(tuple);
+						}
+						if (attributeIndexEntryValue.getValue().size() == 0)
+							objectRemoved.add(attributeIndexEntryValue.getKey());
+					}
+				}
+				
+				for (Object objectToRemove : objectRemoved)
+					attributeIndexEntry.getValue().remove(objectToRemove);
+				
+				if (attributeIndexEntryModified){
+					newAttributeIndex.put(attributeIndexEntry.getKey(), attributeIndexEntry.getValue());
+				}
+			}
+		}
+		ImgGraph.getInstance().getAttributeIndex().setAttributeIndex(newAttributeIndex);
+		
+		Map<Long, NeighborhoodVector> neighborhoodVectorMap = ImgGraph.getInstance().getNeighborhoodVectorMap();
+		for (Tuple<Long, Map<String, List<Tuple<Object, Integer>>>> tuple : modificationsSaved){
+			neighborhoodVectorMap.put(tuple.getX(), NeighborhoodVector.applyModification(((ImgVertex) CacheContainer.getCellCache().get(tuple.getX())).getNeighborhoodVector(), tuple.getY()));
+		}
+		
+		//Garbage collector
+		neighborhoodVectorMap.remove(vertex.getId());
+		
+		ImgGraph.getInstance().setNewNeighborhoodVectorMap(neighborhoodVectorMap);
+		
+		return modificationsSaved;
 	}
 	
 	/**

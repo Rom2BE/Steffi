@@ -5,6 +5,7 @@ import org.zeromq.ZMQ.Context;
 import org.zeromq.ZMQ.Socket;
 
 import com.imgraph.networking.messages.AddressVertexReqMsg;
+import com.imgraph.networking.messages.LocalNeighborhoodVectorsRemovalUpdateReqMsg;
 import com.imgraph.networking.messages.LocalNeighborsReqMsg;
 import com.imgraph.networking.messages.LocalVectorUpdateReqMsg;
 import com.imgraph.networking.messages.LocalVertexIdReqMsg;
@@ -45,8 +46,6 @@ public class CommandWorker implements Runnable {
 				
 				message = Message.readFromBytes(msg);
 				
-				
-				
 				switch (message.getType()) {
 				case LOCAL_NEIGHBORS_REQ: //SYNC
 					CommandProcessor.processLocal2HRequest(worker, (LocalNeighborsReqMsg) message);
@@ -68,6 +67,9 @@ public class CommandWorker implements Runnable {
 					break;					
 				case LOCAL_VECTOR_UPDATE_REQ: //?
 					CommandProcessor.processLocalVectorUpdateRequest(worker, (LocalVectorUpdateReqMsg) message);
+					break;
+				case LOCAL_NEIGHBORHOODVECTOR_REMOVAL_UPDATE_REQ: //?
+					CommandProcessor.processLocalNeighborhoodVectorRemovalUpdateRequest(worker, (LocalNeighborhoodVectorsRemovalUpdateReqMsg) message);
 					break;
 				case NUMBER_OF_CELLS_REQ: //SYNC
 					CommandProcessor.processCellNumberRequest(worker);

@@ -18,6 +18,7 @@ import org.zeromq.ZMQ;
 
 import com.imgraph.common.Configuration;
 import com.imgraph.common.Configuration.Key;
+import com.imgraph.index.AttributeIndex;
 import com.imgraph.index.ImgIndex;
 import com.imgraph.index.NeighborhoodVector;
 import com.imgraph.index.Tuple;
@@ -26,6 +27,7 @@ import com.imgraph.model.CellType;
 import com.imgraph.model.ImgEdge;
 import com.imgraph.model.ImgGraph;
 import com.imgraph.model.ImgVertex;
+import com.imgraph.networking.messages.LocalNeighborhoodVectorsRemovalUpdateReqMsg;
 import com.imgraph.networking.messages.LocalVectorUpdateRepMsg;
 import com.imgraph.networking.messages.LocalVectorUpdateReqMsg;
 import com.imgraph.networking.messages.Message;
@@ -187,7 +189,8 @@ public class CellTransaction {
 	public void commit() {
 		Cache<Long, Object> cache = CacheContainer.getCellCache();
 		List<Long> cellList = new ArrayList<Long>();
-		List<Tuple<Long, NeighborhoodVector>> removedInformation = new ArrayList<Tuple<Long, NeighborhoodVector>>();
+		List<Long> removedVertices = new ArrayList<Long>();
+		List<Tuple<Long, Map<String, List<Tuple<Object, Integer>>>>> modificationsNeeded = new ArrayList<Tuple<Long, Map<String, List<Tuple<Object, Integer>>>>>();
 		TransactionManager tm = null;
 		Local2HopNeighborUpdater local2HNUpdater = null;
 		if (Configuration.getProperty(Key.USE_JTA_TRANSACTIONS).equals("true"))
@@ -206,8 +209,12 @@ public class CellTransaction {
 			
 			for (Long cellId : getRemovedCellIds()){
 				Cell cell = (Cell) CacheContainer.getCellCache().get(cellId);
-				if (cell != null && cell.getCellType().equals(CellType.VERTEX))
-					removedInformation.add(new Tuple<Long, NeighborhoodVector>(cellId, ((ImgVertex) cell).getNeighborhoodVector()));
+				if (cell != null && cell.getCellType().equals(CellType.VERTEX)){
+					//TODO must work when deleting several vertices
+					//Get modifications needed in NeighborhoodVectors to remove this cell & update the AttibuteIndex
+					modificationsNeeded = AttributeIndex.updateRemovedVertices((ImgVertex) cell);
+					removedVertices.add(cellId);
+				}
 				
 				cache.remove(cellId);
 			}
@@ -235,9 +242,39 @@ public class CellTransaction {
 		/**
 		 * Remove deleted cells
 		 */
-		for (Tuple<Long, NeighborhoodVector> tuple : removedInformation){
-			System.out.println("Remove the following tuple : " + tuple);
-			ImgGraph.getInstance().setNeighborhoodVectorMapRemove(tuple.getX(), tuple.getY());
+		if (removedVertices.size() != 0){
+			Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
+			ZMQ.Socket socket = null;
+			ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
+			
+			try {
+				for (Entry<String, String> addressBook : clusterAddresses.entrySet()) {
+					if(!addressBook.getKey().equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString())){
+						socket = context.socket(ZMQ.REQ);
+						
+						socket.connect("tcp://" + addressBook.getValue() + ":" + Configuration.getProperty(Configuration.Key.NODE_PORT));
+						
+						LocalNeighborhoodVectorsRemovalUpdateReqMsg requestMessage = new LocalNeighborhoodVectorsRemovalUpdateReqMsg();
+							
+						requestMessage.setAttributeIndex(ImgGraph.getInstance().getAttributeIndex());
+						
+						requestMessage.setNeighborhoodVectorMap(ImgGraph.getInstance().getNeighborhoodVectorMap());
+							
+						requestMessage.setModifications(modificationsNeeded);	
+								
+						socket.send(Message.convertMessageToBytes(requestMessage), 0);
+							
+						Message.readFromBytes(socket.recv(0));
+		
+						socket.close();
+					}
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}finally {
+				if (socket !=null)
+					socket.close();
+			}
 		}
 		
 		/**
@@ -245,56 +282,60 @@ public class CellTransaction {
 		 *    - Stored on this machine : update its neighborhood vector
 		 *    - Otherwise : Send message to other machines to update their modified cells
 		 */
-		List<Long> distantIds = new ArrayList<Long>();
-		for (Long id : cellList){
-			ImgVertex vertex = (ImgVertex) CacheContainer.getCellCache().get(id);
-			if (vertex != null){
-				if (StorageTools.getCellAddress(id).equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString())){
-					NeighborhoodVector.updateFullNeighborhoodVector(vertex);
-				}
-				else{
-					distantIds.add(id);
+		else {
+			List<Long> distantIds = new ArrayList<Long>();
+			if (removedVertices.size() == 0){
+				for (Long id : cellList){
+					if (!removedVertices.contains(id)){
+						ImgVertex vertex = (ImgVertex) CacheContainer.getCellCache().get(id);
+						if (vertex != null){
+							if (StorageTools.getCellAddress(id).equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString())){
+								NeighborhoodVector.updateFullNeighborhoodVector(vertex);
+							}
+							else{
+								distantIds.add(id);
+							}
+						}
+					}
 				}
 			}
-		}
-		
-		Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
-		ZMQ.Socket socket = null;
-		ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
-		
-		try {
-			for (Entry<String, String> entry : clusterAddresses.entrySet()) {
-				//Only send this message to other machines
-				if(!entry.getKey().equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString())){
-					socket = context.socket(ZMQ.REQ);
-					
-					socket.connect("tcp://" + entry.getValue() + ":" + 
-							Configuration.getProperty(Configuration.Key.NODE_PORT));
-				
-					LocalVectorUpdateReqMsg requestMessage = new LocalVectorUpdateReqMsg();
-					
-					requestMessage.setCellIds(distantIds);
-					
-					requestMessage.setUpdateType(true);
-					
-					requestMessage.setRemovedInformation(removedInformation);
-					
-					requestMessage.setNeighborhoodVectorMap(ImgGraph.getInstance().getNeighborhoodVectorMap());	
+			
+			Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
+			ZMQ.Socket socket = null;
+			ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
+			
+			try {
+				for (Entry<String, String> entry : clusterAddresses.entrySet()) {
+					//Only send this message to other machines
+					if(!entry.getKey().equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString())){
+						socket = context.socket(ZMQ.REQ);
 						
-					socket.send(Message.convertMessageToBytes(requestMessage), 0);
-					
-					LocalVectorUpdateRepMsg response = (LocalVectorUpdateRepMsg) Message.readFromBytes(socket.recv(0));
-					
-					ImgGraph.getInstance().setNeighborhoodVectorMap(response.getNeighborhoodVectorMap());
-
-					socket.close();
+						socket.connect("tcp://" + entry.getValue() + ":" + 
+								Configuration.getProperty(Configuration.Key.NODE_PORT));
+						
+						LocalVectorUpdateReqMsg requestMessage = new LocalVectorUpdateReqMsg();
+						
+						requestMessage.setCellIds(distantIds);
+						
+						requestMessage.setUpdateType(true);
+						
+						requestMessage.setNeighborhoodVectorMap(ImgGraph.getInstance().getNeighborhoodVectorMap());	
+							
+						socket.send(Message.convertMessageToBytes(requestMessage), 0);
+						
+						LocalVectorUpdateRepMsg response = (LocalVectorUpdateRepMsg) Message.readFromBytes(socket.recv(0));
+						
+						ImgGraph.getInstance().setNeighborhoodVectorMap(response.getNeighborhoodVectorMap());
+						
+						socket.close();
+					}
 				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}finally {
+				if (socket !=null)
+					socket.close();
 			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}finally {
-			if (socket !=null)
-				socket.close();
 		}
 	}
 

@@ -259,4 +259,41 @@ public class NeighborhoodVector implements Serializable{
 		}
 		return neighboursList;
 	}
+
+	public static NeighborhoodVector applyModification(NeighborhoodVector neighborhoodVector, Map<String, List<Tuple<Object, Integer>>> modificationsNeeded) {
+		Map<String, List<Tuple<Object, Integer>>> vector = neighborhoodVector.getVector();
+		
+		//Iterate modifications' Attributes
+		for (Entry<String, List<Tuple<Object, Integer>>> modificationsEntry : modificationsNeeded.entrySet()){
+			List<Tuple<Object, Integer>> tupleToRemove = new ArrayList<Tuple<Object, Integer>>();
+			//Find the corresponding Attribute in vector
+			for (Entry<String, List<Tuple<Object, Integer>>> vectorEntry : vector.entrySet()){
+				if (vectorEntry.getKey().equals(modificationsEntry.getKey())){
+					
+					//Iterate modifications' Attributes' values
+					for (Tuple<Object, Integer> modificationsTuple : modificationsEntry.getValue()){
+						
+						//Find the corresponding Attribute's value in vector
+						for (Tuple<Object, Integer> vectorTuple : vectorEntry.getValue()){
+							if (vectorTuple.getX().equals(modificationsTuple.getX())){
+								
+								//Apply modification
+								vectorTuple.setY(vectorTuple.getY() + modificationsTuple.getY());
+								
+								//Remove this tuple if the intensity equals 0
+								if (vectorTuple.getY().equals(0))
+									tupleToRemove.add(vectorTuple);
+							}
+						}
+					}
+				}
+			}
+			
+			//Apply removals
+			for (Tuple<Object, Integer> t : tupleToRemove)
+				vector.get(modificationsEntry.getKey()).remove(t);
+		}
+		
+		return new NeighborhoodVector(vector);
+	}
 }

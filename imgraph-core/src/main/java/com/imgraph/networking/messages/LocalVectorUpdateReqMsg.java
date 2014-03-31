@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.imgraph.index.NeighborhoodVector;
-import com.imgraph.index.Tuple;
 
 /**
  * @author Romain Capron
@@ -19,7 +18,6 @@ public class LocalVectorUpdateReqMsg extends Message {
 	private List<Long> cellIds;
 	private boolean updateType; //True for full update, false for local update
 	private Map<Long, NeighborhoodVector> neighborhoodVectorMap;
-	private List<Tuple<Long, NeighborhoodVector>> removedInformation;
 
 	public List<Long> getCellIds() {
 		return cellIds;
@@ -27,14 +25,6 @@ public class LocalVectorUpdateReqMsg extends Message {
 
 	public void setCellIds(List<Long> cellIds) {
 		this.cellIds = cellIds;
-	}
-	
-	public List<Tuple<Long, NeighborhoodVector>> getRemovedInformation() {
-		return removedInformation;
-	}
-	
-	public void setRemovedInformation(List<Tuple<Long, NeighborhoodVector>> removedInformation) {
-		this.removedInformation = removedInformation;
 	}
 	
 	public boolean getUpdateType() {
@@ -52,7 +42,7 @@ public class LocalVectorUpdateReqMsg extends Message {
 	public void setNeighborhoodVectorMap(Map<Long, NeighborhoodVector> neighborhoodVectorMap){
 		this.neighborhoodVectorMap = neighborhoodVectorMap;
 	}
-
+	
 	public LocalVectorUpdateReqMsg() {
 		super(MessageType.LOCAL_VECTOR_UPDATE_REQ);
 	}

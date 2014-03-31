@@ -112,17 +112,15 @@ public class ImgGraph implements Serializable {
 		AttributeIndex.updateAttributeIndex();
 	}
 	
-	//Needs : ID, NeighborhoodVector
-	public void setNeighborhoodVectorMapRemove(Long id, NeighborhoodVector neighborhoodVector){
+	public void setNewNeighborhoodVectorMap(Map<Long, NeighborhoodVector> mapNeighborhoodVector){
+		this.mapNeighborhoodVector = mapNeighborhoodVector;
+	}
+	
+	public void setNeighborhoodVectorMapRemove(Long id){
 		//Update NeighborhoodVector
 		Map<Long, NeighborhoodVector> mapNeighborhoodVector = this.mapNeighborhoodVector;
 		mapNeighborhoodVector.remove(id); 
 		this.mapNeighborhoodVector = mapNeighborhoodVector;
-		
-		//Update AttributeIndex
-		System.out.println("BEFORE REMOVAL : " + ImgGraph.getInstance().getAttributeIndex());
-		AttributeIndex.removeOldIdsAttributeIndex(id, neighborhoodVector); 
-		System.out.println("AFTER REMOVAL : " + ImgGraph.getInstance().getAttributeIndex());
 	}
 	
 	public AttributeIndex getAttributeIndex(){

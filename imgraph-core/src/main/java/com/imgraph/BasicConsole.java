@@ -380,7 +380,7 @@ public class BasicConsole {
 					e3.setProperty("TypeOfFriend", "Close");
 					edgeIndex.put("TypeOfFriend", "Close", e3.getRawEdge());
 					graph.commit();
-					
+				
 					/*
 					ImgIndexHits<ImgVertex> indexHits = vertexIndex.get("Country", "Bolivia");
 					for (ImgVertex iv : indexHits)

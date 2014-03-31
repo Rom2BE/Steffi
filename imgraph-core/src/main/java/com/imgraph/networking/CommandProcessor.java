@@ -4,6 +4,7 @@ import gnu.trove.procedure.TLongProcedure;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import org.infinispan.Cache;
 import org.zeromq.ZMQ.Socket;
@@ -20,6 +21,7 @@ import com.imgraph.networking.messages.AddressVertexRepMsg;
 import com.imgraph.networking.messages.AddressVertexReqMsg;
 import com.imgraph.networking.messages.ClusterAddressesRep;
 import com.imgraph.networking.messages.IdentifiableMessage;
+import com.imgraph.networking.messages.LocalNeighborhoodVectorsRemovalUpdateReqMsg;
 import com.imgraph.networking.messages.LocalNeighborsRepMsg;
 import com.imgraph.networking.messages.LocalNeighborsReqMsg;
 import com.imgraph.networking.messages.LocalVectorUpdateRepMsg;
@@ -116,16 +118,6 @@ public abstract class CommandProcessor {
 	public static void processLocalVectorUpdateRequest(Socket socket,
 			LocalVectorUpdateReqMsg reqMsg) throws IOException {
 		if(reqMsg != null){
-			//Get the local NeighborhoodVectorMap
-			//Map<Long, NeighborhoodVector> localNVM = ImgGraph.getInstance().getNeighborhoodVectorMap();
-			
-			//Remove deleted cells
-			if (reqMsg.getRemovedInformation() != null){
-				for (Tuple<Long, NeighborhoodVector> tuple : reqMsg.getRemovedInformation())
-					ImgGraph.getInstance().setNeighborhoodVectorMapRemove(tuple.getX(), tuple.getY());
-			}
-
-			//Merge
 			ImgGraph.getInstance().setNeighborhoodVectorMap(AttributeIndex.mergeNeighborhoodVectorMap (reqMsg.getNeighborhoodVectorMap(), ImgGraph.getInstance().getNeighborhoodVectorMap()));
 
 			Cache<Long, Cell> cache = CacheContainer.getCellCache();
@@ -149,6 +141,32 @@ public abstract class CommandProcessor {
 		else
 			System.out.println("No Vertex found");
 	}	
+	
+	public static void processLocalNeighborhoodVectorRemovalUpdateRequest(
+			Socket socket, LocalNeighborhoodVectorsRemovalUpdateReqMsg reqMsg) throws IOException {
+		if(reqMsg != null){
+			//Update Neighborhood Vectors
+			for (Tuple<Long, Map<String, List<Tuple<Object, Integer>>>> tuple : reqMsg.getModifications()){
+				ImgVertex vertex = (ImgVertex) CacheContainer.getCellCache().get(tuple.getX());
+				if (vertex != null){
+					if (StorageTools.getCellAddress(vertex.getId()).equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString()))	
+						vertex.setNeighborhoodVector(NeighborhoodVector.applyModification(vertex.getNeighborhoodVector(), tuple.getY()));
+				}
+			}
+			
+			//Update Neighborhood Vectors Map
+			ImgGraph.getInstance().setNewNeighborhoodVectorMap(reqMsg.getNeighborhoodVectorMap());
+			
+			//Update Attribute Index
+			ImgGraph.getInstance().setAttributeIndex(reqMsg.getAttributeIndex());
+
+			LocalVectorUpdateRepMsg response = new LocalVectorUpdateRepMsg("OK");
+			
+			socket.send(Message.convertMessageToBytes(response), 0);
+		}
+		else
+			System.out.println("No Vertex found");
+	}
 	
 	public static void processCellNumberRequest(Socket socket) throws IOException {
 		Message response = new Message(MessageType.NUMBER_OF_CELLS_REP);
