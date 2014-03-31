@@ -1254,7 +1254,155 @@ public class BasicConsole {
 				Main.sendStopMessage(Configuration.getProperty(Configuration.Key.NODE_PORT));
 			
 				break;
-			}			
+			}
+			/**
+			 * TODO Search
+			 */
+			else if (command.equals("assistedSearch")) {
+				System.out.println("\nWelcome in the search assistant!\n");
+				System.out.println("Attributes indexed : ");
+				System.out.println(ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().keySet());
+				
+				String attribute = IOUtils.readLine("Select an attribute : ");
+				if (ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().keySet().contains(attribute)){
+					ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().get(attribute);
+					System.out.println("Values indexed for the attribute " + attribute + " : ");
+					System.out.println(ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().get(attribute).keySet());
+					//TODO must work for Objects
+					
+					String value = IOUtils.readLine("Select a value : ");
+					for (Entry<Object, List<Tuple<Long, Integer>>> valueIndexed : ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().get(attribute).entrySet()){
+						if (valueIndexed.getKey().toString().equals(value))
+							System.out.println(ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().get(attribute).get(valueIndexed.getKey()));
+					}
+				}
+			} else if (command.equals("joinSearch")) {
+				Tuple<Object, List<Tuple<Long, Integer>>> t1 = null;
+				Tuple<Object, List<Tuple<Long, Integer>>> t2 = null;
+				boolean found = false;
+				boolean error = false;
+				
+				System.out.println(ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().keySet());
+				String a1 = IOUtils.readLine("Select a first attribute : ");
+				if (ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().keySet().contains(a1)){
+					System.out.println(ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().get(a1).keySet());
+					String v1 = IOUtils.readLine("Select its value : ");
+					for (Entry<Object, List<Tuple<Long, Integer>>> valueIndexed : ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().get(a1).entrySet()){
+						if (valueIndexed.getKey().toString().equals(v1)){
+							found = true;
+							t1 = new Tuple<Object, List<Tuple<Long, Integer>>>(valueIndexed.getKey(), valueIndexed.getValue());
+						}
+					}
+					
+					if (!found){
+						System.out.println("Unknown value");
+						error = true;
+					}
+				} else {
+					System.out.println("Unknown attribute");
+					error = true;
+				}
+				
+				String a2 = "";
+				if (!error){
+					found = false;
+					System.out.println(ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().keySet());
+					a2 = IOUtils.readLine("Select an attribute (same or different) : ");
+					if (ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().keySet().contains(a2)){
+						System.out.println(ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().get(a2).keySet());
+						String v2 = IOUtils.readLine("Select its value : ");
+						for (Entry<Object, List<Tuple<Long, Integer>>> valueIndexed : ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().get(a2).entrySet()){
+							if (valueIndexed.getKey().toString().equals(v2)){
+								found = true;
+								t2 = new Tuple<Object, List<Tuple<Long, Integer>>>(valueIndexed.getKey(), valueIndexed.getValue());
+							}
+						}
+						
+						if (!found){
+							System.out.println("Unknown value");
+							error = true;
+						}
+					} else {
+						System.out.println("Unknown attribute");
+						error = true;
+					}
+				}
+				
+				if (!error){
+					System.out.println("Values indexed");
+					System.out.println(a1 + " : " + t1.getX() + " : " + t1.getY());
+					System.out.println(a2 + " : " + t2.getX() + " : " + t2.getY());
+					/*
+					Weight : 69 : [{2,50}, {3,25}, {7,25}, {1,100}]
+					Size : 194 : [{2,50}, {3,100}, {7,50}, {1,25}, {4,50}, {5,50}, {6,25}]
+					*/
+					System.out.println("Search result : ");
+					for (Tuple<Long, Integer> intensities1 : t1.getY()){
+						for (Tuple<Long, Integer> intensities2 : t2.getY()){
+							if(intensities1.getX().equals(intensities2.getX())){
+								System.out.println("Vertex "+intensities1.getX()
+										+ " ["+a1+" : {"+t1.getX()+","+intensities1.getY()+"}] "
+										+"& ["+a2+" : {"+t2.getX()+","+intensities2.getY()+"}]");
+							}
+						}
+					}
+					
+					
+				}
+				
+			} else if (command.equals("searchTest")) {
+				graph.registerItemName("Name");
+				graph.registerItemName("Size");
+				graph.registerItemName("Weight");
+				graph.registerItemName("Friend");
+				
+				graph.startTransaction();
+				
+				//Create vertices
+				ImgVertex v1 = graph.getRawGraph().addVertex(1L, "Vertex 1");
+				v1.putAttribute("Weight", 69);
+				v1.putAttribute("Size", 215);
+				
+				ImgVertex v2 = graph.getRawGraph().addVertex(2L, "Vertex 2");
+				v2.putAttribute("Weight", 81);
+				v2.putAttribute("Size", 163);
+
+				ImgVertex v3 = graph.getRawGraph().addVertex(3L, "Vertex 3");
+				v3.putAttribute("Weight", 97);
+				v3.putAttribute("Size", 194);
+				
+				ImgVertex v4 = graph.getRawGraph().addVertex(4L, "Vertex 4");
+				v4.putAttribute("Weight", 66);
+				v4.putAttribute("Size", 133);
+				
+				ImgVertex v5 = graph.getRawGraph().addVertex(5L, "Vertex 5");
+				v5.putAttribute("Weight", 107);
+				v5.putAttribute("Size", 215);
+				
+				ImgVertex v6 = graph.getRawGraph().addVertex(6L, "Vertex 6");
+				v6.putAttribute("Weight", 75);
+				v6.putAttribute("Size", 163);
+
+				ImgVertex v7 = graph.getRawGraph().addVertex(7L, "Vertex 7");
+				v7.putAttribute("Weight", 93);
+				v7.putAttribute("Size", 192);
+				
+				ImgVertex v8 = graph.getRawGraph().addVertex(8L, "Vertex 8");
+				v8.putAttribute("Weight", 85);
+				v8.putAttribute("Size", 185);
+				
+				//Create edges
+				v1.addEdge(v2, false, "Friend");
+				v2.addEdge(v3, false, "Friend");
+				v2.addEdge(v7, false, "Friend");
+				v3.addEdge(v4, false, "Friend");
+				v3.addEdge(v5, false, "Friend");
+				v5.addEdge(v6, false, "Friend");
+				v5.addEdge(v7, false, "Friend");
+				v7.addEdge(v8, false, "Friend");
+				
+				graph.stopTransaction(Conclusion.SUCCESS);
+			}
 		}
 	}	
 	
