@@ -116,13 +116,6 @@ public class ImgGraph implements Serializable {
 		this.mapNeighborhoodVector = mapNeighborhoodVector;
 	}
 	
-	public void setNeighborhoodVectorMapRemove(Long id){
-		//Update NeighborhoodVector
-		Map<Long, NeighborhoodVector> mapNeighborhoodVector = this.mapNeighborhoodVector;
-		mapNeighborhoodVector.remove(id); 
-		this.mapNeighborhoodVector = mapNeighborhoodVector;
-	}
-	
 	public AttributeIndex getAttributeIndex(){
 		return attributeIndex;
 	}

@@ -92,69 +92,6 @@ public class AttributeIndex implements Serializable {
 		//System.out.println("AFTER : " + ImgGraph.getInstance().getAttributeIndex().getAttributeIndex());
 	}
 	
-	public static void removeOldIdsAttributeIndex(Long id, NeighborhoodVector neighborhoodVector){
-		Map<String, List<Tuple<Object, Integer>>> vector = neighborhoodVector.getVector();
-		Map<String, Map<Object, List<Tuple<Long, Integer>>>> attributeIndex = ImgGraph.getInstance().getAttributeIndex().getAttributeIndex();
-		Map<String, Map<Object, List<Tuple<Long, Integer>>>> result = ImgGraph.getInstance().getAttributeIndex().getAttributeIndex();
-		
-		System.out.println(id + " will be remove with these attributes : "+neighborhoodVector);
-		
-		for (Entry<String, Map<Object, List<Tuple<Long, Integer>>>> attributeIndexEntry : attributeIndex.entrySet()){
-			
-			//Check if there are values (Object) in this attribute (String) we need to remove
-			System.out.println(vector.keySet().contains(attributeIndexEntry.getKey()) + " vector.keySet().contains(attributeIndexEntry.getKey() : " + attributeIndexEntry.getKey());
-			if(vector.keySet().contains(attributeIndexEntry.getKey())){
-				
-				boolean attributeIndexEntryModified = false;
-				List<Object> objectRemoved = new ArrayList<Object>();
-				
-				for (Entry<Object, List<Tuple<Long, Integer>>> attributeIndexEntryValue : attributeIndexEntry.getValue().entrySet()){
-					
-					//Check if this value (Object) is present in the removed vertex
-					boolean present = false;
-					for (Tuple<Object, Integer> tuple : vector.get(attributeIndexEntry.getKey())){
-						System.out.println("Object : " + tuple.getX());
-						if (tuple.getX().equals(attributeIndexEntryValue.getKey()))
-							present = true;
-					}
-					System.out.println("Present : " + present);
-					//Search after possible tuple to remove
-					boolean modified = false;
-					List<Tuple<Long, Integer>> tupleRemoved = new ArrayList<Tuple<Long, Integer>>();
-					if (present){
-						for (Tuple<Long, Integer> tuple : attributeIndexEntryValue.getValue()){
-							if (tuple.getX().equals(id)){
-								System.out.println("tupleRemoved.add(tuple) "+tuple);
-								tupleRemoved.add(tuple);
-								modified = true;
-							}
-						}
-					}
-					
-					//Process these modifications
-					if (modified){
-						attributeIndexEntryModified = true;
-						for (Tuple<Long, Integer> tuple : tupleRemoved){
-							System.out.println("removing "+tuple);
-							attributeIndexEntryValue.getValue().remove(tuple);
-						}
-						if (attributeIndexEntryValue.getValue().size() == 0)
-							objectRemoved.add(attributeIndexEntryValue.getKey());
-					}
-				}
-				
-				for (Object objectToRemove : objectRemoved)
-					attributeIndexEntry.getValue().remove(objectToRemove);
-				
-				if (attributeIndexEntryModified){
-					result.put(attributeIndexEntry.getKey(), attributeIndexEntry.getValue());
-				}
-			}
-		}
-		System.out.println("RESULT = " + result);
-		ImgGraph.getInstance().getAttributeIndex().setAttributeIndex(result);
-	}
-	
 	public static List<Tuple<Long, Map<String, List<Tuple<Object, Integer>>>>> updateList(Long id, String attribute, Object value, int modification, List<Tuple<Long, Map<String, List<Tuple<Object, Integer>>>>> list){
 		
 		boolean vertexFound = false;
@@ -356,7 +293,7 @@ public class AttributeIndex implements Serializable {
 	 * 
 	 * @param vm1 newer values
 	 * @param vm2 
-	 * @return vm2 with the values of vm1
+	 * @return vm2 with the values of vm1 merged
 	 */
 	public static Map<Long, NeighborhoodVector> mergeNeighborhoodVectorMap (Map<Long, NeighborhoodVector> vm1, Map<Long, NeighborhoodVector> vm2){
 		for (Entry<Long, NeighborhoodVector> entryVM1 : vm1.entrySet()){
