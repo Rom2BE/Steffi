@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -1348,6 +1349,84 @@ public class BasicConsole {
 					}
 					
 					
+				}
+				
+			} else if (command.equals("joinMultipleSearch")) {
+				List<Tuple<Tuple<String,Object>, List<Tuple<Long, Integer>>>> tuplesList = new ArrayList<Tuple<Tuple<String,Object>, List<Tuple<Long, Integer>>>>();
+				boolean found = false;
+				boolean error = false;
+				int joinElements = 0;
+				
+				command = IOUtils.readLine("Number of attribute value to search: ");
+				if (isNumeric(command))
+					joinElements = Integer.parseInt(command);
+				else {
+					System.out.println("Incorrect Input.");
+					error = true;
+				}
+					
+				for(int i = 0; i<joinElements; i++){
+					if (!error){
+						System.out.println(ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().keySet());
+						String attribute = IOUtils.readLine("Select a first attribute : ");
+						if (ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().keySet().contains(attribute)){
+							System.out.println(ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().get(attribute).keySet());
+							String v1 = IOUtils.readLine("Select its value : ");
+							for (Entry<Object, List<Tuple<Long, Integer>>> valueIndexed : ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().get(attribute).entrySet()){
+								if (valueIndexed.getKey().toString().equals(v1)){
+									found = true;
+									tuplesList.add(new Tuple<Tuple<String,Object>, List<Tuple<Long, Integer>>>(new Tuple<String,Object>(attribute, valueIndexed.getKey()), valueIndexed.getValue()));
+								}
+							}
+							
+							if (!found){
+								System.out.println("Unknown value");
+								error = true;
+							}
+						} else {
+							System.out.println("Unknown attribute");
+							error = true;
+						}
+					}
+				}
+				
+				if (!error){
+					System.out.println("Values indexed");
+					for(int i = 0; i<joinElements; i++)
+						System.out.println(tuplesList.get(i).getX().getX() + " : " + tuplesList.get(i).getX().getY() + " : " + tuplesList.get(i).getY());
+
+					Map<Long, List<Tuple<String, Tuple<Object, Integer>>>> result = new HashMap<Long, List<Tuple<String, Tuple<Object, Integer>>>>();
+					//First tuple : add everything
+					for (Tuple<Long, Integer> intensities1 : tuplesList.get(0).getY()){
+						List<Tuple<String, Tuple<Object, Integer>>> list = new ArrayList<Tuple<String, Tuple<Object, Integer>>>();
+						list.add(new Tuple<String, Tuple<Object, Integer>>(tuplesList.get(0).getX().getX(), new Tuple<Object, Integer>(tuplesList.get(0).getX().getY(), intensities1.getY())));
+						result.put(intensities1.getX(), list);
+					}
+					
+					//Other tuples : add only if already present
+					for(int i = 1; i<joinElements; i++){
+						for (Tuple<Long, Integer> intensities : tuplesList.get(i).getY()){
+							if (result.keySet().contains(intensities.getX())){
+								List<Tuple<String, Tuple<Object, Integer>>> list = result.get(intensities.getX());
+								list.add(new Tuple<String, Tuple<Object, Integer>>(tuplesList.get(i).getX().getX(), new Tuple<Object, Integer>(tuplesList.get(i).getX().getY(), intensities.getY())));
+								result.put(intensities.getX(), list);
+							}
+						}
+					}
+
+					//Clean if not present in all tuples
+					List<Long> idToRemove = new ArrayList<Long>();
+					for (Entry<Long, List<Tuple<String, Tuple<Object, Integer>>>> entry : result.entrySet()){
+						if (entry.getValue().size() < joinElements)
+							idToRemove.add(entry.getKey());
+					}
+					
+					for (Long id : idToRemove)
+						result.remove(id);
+					
+					System.out.println("Search result : ");
+					for (Entry<Long, List<Tuple<String, Tuple<Object, Integer>>>> entry : result.entrySet())
+						System.out.println(entry.getKey() + " : " + entry.getValue());
 				}
 				
 			} else if (command.equals("searchTest")) {
