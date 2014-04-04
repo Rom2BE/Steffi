@@ -321,7 +321,7 @@ public class TestTools {
 				//Add a new edge between these two edges.
 				
 				graph.startTransaction();
-				
+				//v1 & v2 must be included in the transaction
 				((ImgVertex) graph.getRawGraph().retrieveCell(idV1)).addEdge(((ImgVertex) graph.getRawGraph().retrieveCell(idV2)), directed, "Friend");
 				
 				graph.commit();

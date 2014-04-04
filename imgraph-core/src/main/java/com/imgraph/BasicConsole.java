@@ -25,6 +25,7 @@ import org.zeromq.ZMQ;
 import com.imgraph.common.Configuration;
 import com.imgraph.common.IOUtils;
 import com.imgraph.common.ImgLogger;
+import com.imgraph.index.AttributeIndex;
 import com.imgraph.index.ImgIndex;
 import com.imgraph.index.ImgIndexHits;
 import com.imgraph.index.NeighborhoodVector;
@@ -40,6 +41,9 @@ import com.imgraph.networking.NodeServer;
 import com.imgraph.networking.messages.AddressVertexRepMsg;
 import com.imgraph.networking.messages.AddressVertexReqMsg;
 import com.imgraph.networking.messages.LoadMessage;
+import com.imgraph.networking.messages.LocalVectorUpdateRepMsg;
+import com.imgraph.networking.messages.LocalVectorUpdateReqMsg;
+import com.imgraph.networking.messages.MessageType;
 import com.imgraph.networking.messages.LoadMessage.LoadFileType;
 import com.imgraph.networking.messages.Message;
 import com.imgraph.storage.CacheContainer;
@@ -1249,6 +1253,38 @@ public class BasicConsole {
 				}
 			} else if (command.equals("clear")) {
 				CacheContainer.getCellCache().clear();
+				//Clear Attribute Index
+				ImgGraph.getInstance().setAttributeIndex(new AttributeIndex());
+				ImgGraph.getInstance().setNewNeighborhoodVectorMap(new HashMap<Long, NeighborhoodVector>());
+				
+				Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
+				ZMQ.Socket socket = null;
+				ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
+				
+				try {
+					for (Entry<String, String> entry : clusterAddresses.entrySet()) {
+						//Only send this message to other machines
+						if(!entry.getKey().equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString())){
+							socket = context.socket(ZMQ.REQ);
+							
+							socket.connect("tcp://" + entry.getValue() + ":" + 
+									Configuration.getProperty(Configuration.Key.NODE_PORT));
+							
+							Message requestMessage = new Message(MessageType.CLEAR_ATTRIBUTE_INDEX_REQ);
+							
+							socket.send(Message.convertMessageToBytes(requestMessage), 0);
+							
+							Message.readFromBytes(socket.recv(0));
+							
+							socket.close();
+						}
+					}
+				} catch (IOException e) {
+					e.printStackTrace();
+				}finally {
+					if (socket !=null)
+						socket.close();
+				}
 				System.out.println("Cell cache cleared");
 			} else if (command.equals("exit")) {
 				System.out.println("BYE...");

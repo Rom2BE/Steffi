@@ -1,9 +1,7 @@
 package com.imgraph.networking.messages;
 
-import java.util.List;
 import java.util.Map;
 
-import com.imgraph.index.AttributeIndex;
 import com.imgraph.index.NeighborhoodVector;
 
 /**

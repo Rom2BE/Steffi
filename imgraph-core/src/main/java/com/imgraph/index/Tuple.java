@@ -2,6 +2,7 @@ package com.imgraph.index;
 
 import java.io.Serializable;
 
+@SuppressWarnings("rawtypes")
 public class Tuple<X, Y> implements Serializable, Comparable{ 
 	
 	private static final long serialVersionUID = 205230036159116313L;

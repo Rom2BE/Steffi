@@ -318,7 +318,7 @@ public class CellTransaction {
 						requestMessage.setCellIds(distantIds);
 						
 						requestMessage.setUpdateType(true);
-						
+						//TODO only send modification instead of send the whole data structure.
 						requestMessage.setNeighborhoodVectorMap(ImgGraph.getInstance().getNeighborhoodVectorMap());	
 							
 						socket.send(Message.convertMessageToBytes(requestMessage), 0);

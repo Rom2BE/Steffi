@@ -2,6 +2,7 @@ package com.imgraph.index;
 
 import java.util.Comparator;
 
+@SuppressWarnings("rawtypes")
 public class TupleComparator implements Comparator{
 	//Used to sort a list of tuples in decreasing order
 	@Override
