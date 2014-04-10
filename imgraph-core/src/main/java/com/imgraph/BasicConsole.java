@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import org.infinispan.remoting.transport.Address;
 import org.infinispan.remoting.transport.jgroups.JGroupsAddress;
@@ -85,6 +86,7 @@ public class BasicConsole {
 		runConsole(true);
 	}
 	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private static void runConsole(boolean initZMQ) throws Exception{
 		System.setProperty("java.net.preferIPv4Stack" , "true");
 		String command;
@@ -1387,8 +1389,7 @@ public class BasicConsole {
 					
 				}
 				
-			} else if (command.equals("joinMultipleSearch")) {
-				List<Tuple<Tuple<String,Object>, List<Tuple<Long, Integer>>>> tuplesList = new ArrayList<Tuple<Tuple<String,Object>, List<Tuple<Long, Integer>>>>();
+			}else if (command.equals("joinMultipleSearch")) {
 				boolean found = false;
 				boolean error = false;
 				int joinElements = 0;
@@ -1401,10 +1402,15 @@ public class BasicConsole {
 					error = true;
 				}
 					
+				//Ask the user which {attribute, value} pairs he is looking after
+				//For every pair, fill tuplesList with a list of vertices containing that pair
+				//tuplesList = List<Tuple<{attribute, value}, List<Intensity of {attribute, value} in vertices containing it>>>
+				List<Tuple<Tuple<String,Object>, List<Tuple<Long, Integer>>>> tuplesList = new ArrayList<Tuple<Tuple<String,Object>, List<Tuple<Long, Integer>>>>();
+				
 				for(int i = 0; i<joinElements; i++){
 					if (!error){
 						System.out.println(ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().keySet());
-						String attribute = IOUtils.readLine("Select a first attribute : ");
+						String attribute = IOUtils.readLine("Select an attribute : ");
 						if (ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().keySet().contains(attribute)){
 							System.out.println(ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().get(attribute).keySet());
 							String v1 = IOUtils.readLine("Select its value : ");
@@ -1427,11 +1433,14 @@ public class BasicConsole {
 				}
 				
 				if (!error){
-					System.out.println("Values indexed");
+					//First print the values found
+					System.out.println("\nValues indexed");
 					for(int i = 0; i<joinElements; i++)
 						System.out.println(tuplesList.get(i).getX().getX() + " : " + tuplesList.get(i).getX().getY() + " : " + tuplesList.get(i).getY());
 
+					//This HashMap called result will contain vertices laying in the neighborhoods of each researched value.
 					Map<Long, List<Tuple<String, Tuple<Object, Integer>>>> result = new HashMap<Long, List<Tuple<String, Tuple<Object, Integer>>>>();
+					
 					//First tuple : add everything
 					for (Tuple<Long, Integer> intensities1 : tuplesList.get(0).getY()){
 						List<Tuple<String, Tuple<Object, Integer>>> list = new ArrayList<Tuple<String, Tuple<Object, Integer>>>();
@@ -1456,16 +1465,484 @@ public class BasicConsole {
 						if (entry.getValue().size() < joinElements)
 							idToRemove.add(entry.getKey());
 					}
-					
 					for (Long id : idToRemove)
 						result.remove(id);
 					
-					System.out.println("Search result : ");
+					//Print vertices found
+					System.out.println("\nPivot values : ");
 					for (Entry<Long, List<Tuple<String, Tuple<Object, Integer>>>> entry : result.entrySet())
 						System.out.println(entry.getKey() + " : " + entry.getValue());
+					
+					List<TreeSet<Long>> rawResults;
+					
+					//result is not empty
+					if (result.size() != 0){
+						
+						rawResults = buildConnectedGraph(graph, joinElements, tuplesList, new ArrayList(result.keySet()), true);
+					}
+					//result is empty, the neighborhoods are not overlapping
+					else{
+						System.out.println("Neighborhood are not overlapping, we will extend them");
+						
+						System.out.println("\nValues indexed");
+						for(int i = 0; i<joinElements; i++)
+							System.out.println(tuplesList.get(i).getX().getX() + " : " + tuplesList.get(i).getX().getY() + " : " + tuplesList.get(i).getY());
+						
+						List<List<Long>> expendedIds = new ArrayList<List<Long>>();
+						
+						//Fill expendedIds with values indexed intensities list.
+						for(int i = 0; i<joinElements; i++){
+							List<Long> ids = new ArrayList<Long>();
+							for (Tuple<Long, Integer> tuple : tuplesList.get(i).getY())
+								ids.add(tuple.getX());
+							
+							expendedIds.add(ids);
+						}
+						
+						System.out.println("Expended Ids : " + expendedIds);
+						
+						List<Long> pivots = updatePivots(expendedIds);
+						
+						System.out.println("Pivots : " + pivots);
+						
+						while (checkPivotInAllLists(pivots, expendedIds) == null){ //null if no pivots present in all Lists
+							int id = getListIdNoPivots(pivots, expendedIds);//id of a list containing no pivots
+							
+							if (id == -1){
+								id = getListIdLessPivots(pivots, expendedIds);//id of a list containing less pivots than other lists
+							}
+							
+							List<Long> expendedList = expend(expendedIds.get(id));
+							expendedIds.remove(id);
+							expendedIds.add(expendedList);
+							
+							pivots = updatePivots(expendedIds);
+							
+						}
+						
+						System.out.println("Expended Ids : " + expendedIds);
+						System.out.println("Pivots : " + pivots);
+						//Only keep pivots present in all neighborhoods
+						List<Long> finalPivots = new ArrayList<Long>();
+						
+						boolean presentInAll;
+						for (Long id : pivots){
+							presentInAll = true;
+							for (List<Long> list : expendedIds){
+								if (!list.contains(id))
+									presentInAll = false;
+							}
+							if (presentInAll)
+								finalPivots.add(id);
+						}
+						System.out.println("Final pivots : " + finalPivots);
+						
+
+						rawResults = buildConnectedGraph(graph, joinElements, tuplesList, finalPivots, false);
+					}
+					
+					//REMOVE RESULTS BIGGER THAN OTHERS
+					boolean modified = true;
+					
+					while (modified){
+						modified = false;
+						List<TreeSet<Long>> toRemove = new ArrayList<TreeSet<Long>>();
+						if (rawResults.size() != 0){
+							int size = rawResults.get(0).size();
+							for (TreeSet<Long> list : rawResults){
+								if (list.size() > size)
+									toRemove.add(list);
+								else if (list.size() < size){
+									size = list.size();
+									modified = true;
+								}
+							}
+							
+							for (TreeSet<Long> list : toRemove)
+								rawResults.remove(list);
+						}
+					}
+
+					//PRINT FINAL RESULTS
+					if (rawResults.size() < 2)
+						System.out.println("\nSearch result : "+rawResults);
+					else
+						System.out.println("\nSearch results : "+rawResults);
 				}
 				
-			} else if (command.equals("searchTest")) {
+			} /* else if (command.equals("joinMultipleSearch")) {
+				boolean found = false;
+				boolean error = false;
+				int joinElements = 0;
+				
+				command = IOUtils.readLine("Number of attribute value to search: ");
+				if (isNumeric(command))
+					joinElements = Integer.parseInt(command);
+				else {
+					System.out.println("Incorrect Input.");
+					error = true;
+				}
+					
+				//Ask the user which {attribute, value} pairs he is looking after
+				//For every pair, fill tuplesList with a list of vertices containing that pair
+				//tuplesList = List<Tuple<{attribute, value}, List<Intensity of {attribute, value} in vertices containing it>>>
+				List<Tuple<Tuple<String,Object>, List<Tuple<Long, Integer>>>> tuplesList = new ArrayList<Tuple<Tuple<String,Object>, List<Tuple<Long, Integer>>>>();
+				
+				for(int i = 0; i<joinElements; i++){
+					if (!error){
+						System.out.println(ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().keySet());
+						String attribute = IOUtils.readLine("Select an attribute : ");
+						if (ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().keySet().contains(attribute)){
+							System.out.println(ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().get(attribute).keySet());
+							String v1 = IOUtils.readLine("Select its value : ");
+							for (Entry<Object, List<Tuple<Long, Integer>>> valueIndexed : ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().get(attribute).entrySet()){
+								if (valueIndexed.getKey().toString().equals(v1)){
+									found = true;
+									tuplesList.add(new Tuple<Tuple<String,Object>, List<Tuple<Long, Integer>>>(new Tuple<String,Object>(attribute, valueIndexed.getKey()), valueIndexed.getValue()));
+								}
+							}
+							
+							if (!found){
+								System.out.println("Unknown value");
+								error = true;
+							}
+						} else {
+							System.out.println("Unknown attribute");
+							error = true;
+						}
+					}
+				}
+				
+				if (!error){
+					//First print the values found
+					System.out.println("\nValues indexed");
+					for(int i = 0; i<joinElements; i++)
+						System.out.println(tuplesList.get(i).getX().getX() + " : " + tuplesList.get(i).getX().getY() + " : " + tuplesList.get(i).getY());
+
+					//This HashMap called result will contain vertices laying in the neighborhoods of each researched value.
+					Map<Long, List<Tuple<String, Tuple<Object, Integer>>>> result = new HashMap<Long, List<Tuple<String, Tuple<Object, Integer>>>>();
+					
+					//First tuple : add everything
+					for (Tuple<Long, Integer> intensities1 : tuplesList.get(0).getY()){
+						List<Tuple<String, Tuple<Object, Integer>>> list = new ArrayList<Tuple<String, Tuple<Object, Integer>>>();
+						list.add(new Tuple<String, Tuple<Object, Integer>>(tuplesList.get(0).getX().getX(), new Tuple<Object, Integer>(tuplesList.get(0).getX().getY(), intensities1.getY())));
+						result.put(intensities1.getX(), list);
+					}
+					
+					//Other tuples : add only if already present
+					for(int i = 1; i<joinElements; i++){
+						for (Tuple<Long, Integer> intensities : tuplesList.get(i).getY()){
+							if (result.keySet().contains(intensities.getX())){
+								List<Tuple<String, Tuple<Object, Integer>>> list = result.get(intensities.getX());
+								list.add(new Tuple<String, Tuple<Object, Integer>>(tuplesList.get(i).getX().getX(), new Tuple<Object, Integer>(tuplesList.get(i).getX().getY(), intensities.getY())));
+								result.put(intensities.getX(), list);
+							}
+						}
+					}
+
+					//Clean if not present in all tuples
+					List<Long> idToRemove = new ArrayList<Long>();
+					for (Entry<Long, List<Tuple<String, Tuple<Object, Integer>>>> entry : result.entrySet()){
+						if (entry.getValue().size() < joinElements)
+							idToRemove.add(entry.getKey());
+					}
+					for (Long id : idToRemove)
+						result.remove(id);
+					
+					//Print vertices found
+					System.out.println("\nPivot values : ");
+					for (Entry<Long, List<Tuple<String, Tuple<Object, Integer>>>> entry : result.entrySet())
+						System.out.println(entry.getKey() + " : " + entry.getValue());
+					
+					//result is not empty
+					if (result.size() != 0){
+						List<TreeSet<Long>> rawResults = new ArrayList<TreeSet<Long>>();
+						for (Entry<Long, List<Tuple<String, Tuple<Object, Integer>>>> entry : result.entrySet()){
+							//Find a connected graph for every entry in result
+							TreeSet<Long> connectedGraph = new TreeSet<Long>();
+							List<Tuple<String,Object>> valueFound = new ArrayList<Tuple<String,Object>>();
+							
+							//First add this vertice
+							ImgVertex vertex = (ImgVertex) graph.getRawGraph().retrieveCell(entry.getKey());
+							connectedGraph.add(vertex.getId());
+							
+							//Check if we found a value in this vertex
+							found = checkIfNewValueFound(joinElements, tuplesList, valueFound, vertex);
+							
+							
+							//We found maybe the last value needed
+							boolean allFound = false;
+							if (found) //TODO
+								allFound = allValuesFound(joinElements, tuplesList, valueFound);
+							//All researched values are in this vertex
+							if (!found || !allFound){
+								//Need to expand the connectedGraph
+								//Only add vertices that are in neighborhood of researched values 
+								boolean stop = false;
+								while(!stop){
+									List<Long> newIds = new ArrayList<Long>();
+									for (Long id : connectedGraph){
+										vertex = (ImgVertex) graph.getRawGraph().retrieveCell(id);
+										for (ImgEdge edge : vertex.getEdges()){
+											if (!connectedGraph.contains(edge.getDestCellId())){
+												
+												ImgVertex newVertex = (ImgVertex) graph.getRawGraph().retrieveCell(edge.getDestCellId());
+												
+												if (checkIfValuePresentInNeighborhoodVector(joinElements, tuplesList, newVertex)){
+													newIds.add(newVertex.getId());
+													
+													//Check if we found a value in this vertex
+													found = checkIfNewValueFound(joinElements, tuplesList, valueFound, newVertex);
+													//We found maybe the last value needed
+													allFound = allValuesFound(joinElements, tuplesList, valueFound);
+													//All researched values are in this vertex
+													if (found && allFound)
+														stop = true;
+												}
+											}
+										}
+									}
+									
+									for (Long newId : newIds){
+										if (!connectedGraph.contains(newId))
+												connectedGraph.add(newId);
+									}
+								}
+							}
+
+							//PRUNNING
+							//Removes vertices that don't take away these graph properties :
+							//	-The graph must be connected : checkConnected
+							//	-All researched values must be in the graph : checkValuesPresent
+							
+							boolean modified = true;
+							
+							while (modified){
+								modified = false;
+								List<Long> copy = new ArrayList<Long>(connectedGraph);
+								List<Long> removedIds = new ArrayList<Long>();
+								
+								for (Long id : connectedGraph){
+									copy.remove(id);
+									
+									if (copy.size()!=0 && checkConnected(copy) && checkValuesPresent(joinElements, tuplesList, copy)){
+										modified = true;
+										removedIds.add(id);
+									}
+									else
+										copy.add(id);
+								}
+								for(Long id : removedIds)
+									connectedGraph.remove(id);
+							}
+							//Avoid duplicates
+							if (!rawResults.contains(connectedGraph))
+								rawResults.add(connectedGraph);
+
+						}
+
+						//REMOVE RESULTS BIGGER THAN OTHERS
+						boolean modified = true;
+						
+						while (modified){
+							modified = false;
+							List<TreeSet<Long>> toRemove = new ArrayList<TreeSet<Long>>();
+							if (rawResults.size() != 0){
+								int size = rawResults.get(0).size();
+								for (TreeSet<Long> list : rawResults){
+									if (list.size() > size)
+										toRemove.add(list);
+									else if (list.size() < size){
+										size = list.size();
+										modified = true;
+									}
+								}
+								
+								for (TreeSet<Long> list : toRemove)
+									rawResults.remove(list);
+							}
+						}
+
+						//PRINT FINAL RESULTS
+						if (rawResults.size() < 2)
+							System.out.println("\nSearch result : "+rawResults);
+						else
+							System.out.println("\nSearch results : "+rawResults);
+					}
+					//result is empty, the neighborhoods are not overlapping
+					else{
+						System.out.println("Neighborhood are not overlapping, we will extend them");
+						
+						System.out.println("\nValues indexed");
+						for(int i = 0; i<joinElements; i++)
+							System.out.println(tuplesList.get(i).getX().getX() + " : " + tuplesList.get(i).getX().getY() + " : " + tuplesList.get(i).getY());
+						
+						List<List<Long>> expendedIds = new ArrayList<List<Long>>();
+						
+						//Fill expendedIds with values indexed intensities list.
+						for(int i = 0; i<joinElements; i++){
+							List<Long> ids = new ArrayList<Long>();
+							for (Tuple<Long, Integer> tuple : tuplesList.get(i).getY())
+								ids.add(tuple.getX());
+							
+							expendedIds.add(ids);
+						}
+						
+						System.out.println("Expended Ids : " + expendedIds);
+						
+						List<Long> pivots = updatePivots(expendedIds);
+						
+						System.out.println("Pivots : " + pivots);
+						
+						while (checkPivotInAllLists(pivots, expendedIds) == null){ //null if no pivots present in all Lists
+							int id = getListIdNoPivots(pivots, expendedIds);//id of a list containing no pivots
+							
+							if (id == -1){
+								id = getListIdLessPivots(pivots, expendedIds);//id of a list containing less pivots than other lists
+							}
+							
+							List<Long> expendedList = expend(expendedIds.get(id));
+							expendedIds.remove(id);
+							expendedIds.add(expendedList);
+							
+							pivots = updatePivots(expendedIds);
+							
+						}
+						
+						System.out.println("Expended Ids : " + expendedIds);
+						System.out.println("Pivots : " + pivots);
+						//Only keep pivots present in all neighborhoods
+						List<Long> finalPivots = new ArrayList<Long>();
+						
+						boolean presentInAll;
+						for (Long id : pivots){
+							presentInAll = true;
+							for (List<Long> list : expendedIds){
+								if (!list.contains(id))
+									presentInAll = false;
+							}
+							if (presentInAll)
+								finalPivots.add(id);
+						}
+						System.out.println("Final pivots : " + finalPivots);
+						
+
+						List<TreeSet<Long>> rawResults = new ArrayList<TreeSet<Long>>();
+						for (Long pivotID : finalPivots){
+							//Find a connected graph for every entry in result
+							TreeSet<Long> connectedGraph = new TreeSet<Long>();
+							List<Tuple<String,Object>> valueFound = new ArrayList<Tuple<String,Object>>();
+							
+							//First add this vertice
+							ImgVertex vertex = (ImgVertex) graph.getRawGraph().retrieveCell(pivotID);
+							connectedGraph.add(vertex.getId());
+							
+							//Check if we found a value in this vertex
+							found = checkIfNewValueFound(joinElements, tuplesList, valueFound, vertex);
+							
+							
+							//We found maybe the last value needed
+							boolean allFound = false;
+							if (found) //TODO
+								allFound = allValuesFound(joinElements, tuplesList, valueFound);
+							//All researched values are in this vertex
+							if (!found || !allFound){
+								//Need to expand the connectedGraph
+								//TODO not anymore Only add vertices that are in neighborhood of researched values 
+								boolean stop = false;
+								while(!stop){
+									List<Long> newIds = new ArrayList<Long>();
+									for (Long id : connectedGraph){
+										vertex = (ImgVertex) graph.getRawGraph().retrieveCell(id);
+										for (ImgEdge edge : vertex.getEdges()){
+											if (!connectedGraph.contains(edge.getDestCellId())){
+												
+												ImgVertex newVertex = (ImgVertex) graph.getRawGraph().retrieveCell(edge.getDestCellId());
+												
+												//if (checkIfValuePresentInNeighborhoodVector(joinElements, tuplesList, newVertex)){
+													newIds.add(newVertex.getId());
+													
+													//Check if we found a value in this vertex
+													found = checkIfNewValueFound(joinElements, tuplesList, valueFound, newVertex);
+													//We found maybe the last value needed
+													allFound = allValuesFound(joinElements, tuplesList, valueFound);
+													//All researched values are in this vertex
+													if (found && allFound)
+														stop = true;
+												//}
+											}
+										}
+									}
+									
+									for (Long newId : newIds){
+										if (!connectedGraph.contains(newId))
+												connectedGraph.add(newId);
+									}
+								}
+							}
+
+							//PRUNNING
+							//Removes vertices that don't take away these graph properties :
+							//	-The graph must be connected : checkConnected
+							//	-All researched values must be in the graph : checkValuesPresent
+							
+							boolean modified = true;
+							
+							while (modified){
+								modified = false;
+								List<Long> copy = new ArrayList<Long>(connectedGraph);
+								List<Long> removedIds = new ArrayList<Long>();
+								
+								for (Long id : connectedGraph){
+									copy.remove(id);
+									
+									if (copy.size()!=0 && checkConnected(copy) && checkValuesPresent(joinElements, tuplesList, copy)){
+										modified = true;
+										removedIds.add(id);
+									}
+									else
+										copy.add(id);
+								}
+								for(Long id : removedIds)
+									connectedGraph.remove(id);
+							}
+							//Avoid duplicates
+							if (!rawResults.contains(connectedGraph))
+								rawResults.add(connectedGraph);
+
+						}
+
+						//REMOVE RESULTS BIGGER THAN OTHERS
+						boolean modified = true;
+						
+						while (modified){
+							modified = false;
+							List<TreeSet<Long>> toRemove = new ArrayList<TreeSet<Long>>();
+							if (rawResults.size() != 0){
+								int size = rawResults.get(0).size();
+								for (TreeSet<Long> list : rawResults){
+									if (list.size() > size)
+										toRemove.add(list);
+									else if (list.size() < size){
+										size = list.size();
+										modified = true;
+									}
+								}
+								
+								for (TreeSet<Long> list : toRemove)
+									rawResults.remove(list);
+							}
+						}
+
+						//PRINT FINAL RESULTS
+						if (rawResults.size() < 2)
+							System.out.println("\nSearch result : "+rawResults);
+						else
+							System.out.println("\nSearch results : "+rawResults);
+					}
+				}
+				
+			} */else if (command.equals("searchTest")) {
 				graph.registerItemName("Name");
 				graph.registerItemName("Size");
 				graph.registerItemName("Weight");
@@ -1517,9 +1994,452 @@ public class BasicConsole {
 				v7.addEdge(v8, false, "Friend");
 				
 				graph.stopTransaction(Conclusion.SUCCESS);
+			} else if (command.equals("searchTest2")) {
+				graph.registerItemName("Name");
+				graph.registerItemName("Size");
+				graph.registerItemName("Weight");
+				graph.registerItemName("Friend");
+				
+				graph.startTransaction();
+				
+				//Create vertices
+				ImgVertex v1 = graph.getRawGraph().addVertex(1L, "Vertex 1");
+				v1.putAttribute("Weight", 69);
+				v1.putAttribute("Size", 215);
+				
+				ImgVertex v2 = graph.getRawGraph().addVertex(2L, "Vertex 2");
+				v2.putAttribute("Weight", 81);
+				v2.putAttribute("Size", 163);
+
+				ImgVertex v3 = graph.getRawGraph().addVertex(3L, "Vertex 3");
+				v3.putAttribute("Weight", 97);
+				v3.putAttribute("Size", 194);
+				
+				ImgVertex v4 = graph.getRawGraph().addVertex(4L, "Vertex 4");
+				v4.putAttribute("Weight", 66);
+				v4.putAttribute("Size", 133);
+				
+				ImgVertex v5 = graph.getRawGraph().addVertex(5L, "Vertex 5");
+				v5.putAttribute("Weight", 107);
+				v5.putAttribute("Size", 215);
+				
+				ImgVertex v6 = graph.getRawGraph().addVertex(6L, "Vertex 6");
+				v6.putAttribute("Weight", 75);
+				v6.putAttribute("Size", 163);
+
+				ImgVertex v7 = graph.getRawGraph().addVertex(7L, "Vertex 7");
+				v7.putAttribute("Weight", 93);
+				v7.putAttribute("Size", 192);
+				
+				ImgVertex v8 = graph.getRawGraph().addVertex(8L, "Vertex 8");
+				v8.putAttribute("Weight", 85);
+				v8.putAttribute("Size", 185);
+				
+				ImgVertex v9 = graph.getRawGraph().addVertex(9L, "Vertex 9");
+				v9.putAttribute("Weight", 77);
+				v9.putAttribute("Size", 154);
+				
+				ImgVertex v10 = graph.getRawGraph().addVertex(10L, "Vertex 10");
+				v10.putAttribute("Weight", 72);
+				v10.putAttribute("Size", 144);
+				
+				ImgVertex v11 = graph.getRawGraph().addVertex(11L, "Vertex 11");
+				v11.putAttribute("Weight", 22);
+				v11.putAttribute("Size", 200);
+				
+				ImgVertex v12 = graph.getRawGraph().addVertex(12L, "Vertex 12");
+				v12.putAttribute("Weight", 55);
+				v12.putAttribute("Size", 124);
+
+				ImgVertex v13 = graph.getRawGraph().addVertex(13L, "Vertex 13");
+				v13.putAttribute("Weight", 36);
+				v13.putAttribute("Size", 124);
+				
+				ImgVertex v14 = graph.getRawGraph().addVertex(14L, "Vertex 14");
+				v14.putAttribute("Weight", 57);
+				v14.putAttribute("Size", 145);
+				
+				ImgVertex v15 = graph.getRawGraph().addVertex(15L, "Vertex 15");
+				v15.putAttribute("Weight", 69);
+				v15.putAttribute("Size", 168);
+				
+				ImgVertex v16 = graph.getRawGraph().addVertex(16L, "Vertex 16");
+				v16.putAttribute("Weight", 39);
+				v16.putAttribute("Size", 100);
+
+				ImgVertex v17 = graph.getRawGraph().addVertex(17L, "Vertex 17");
+				v17.putAttribute("Weight", 79);
+				v17.putAttribute("Size", 171);
+				
+				ImgVertex v18 = graph.getRawGraph().addVertex(18L, "Vertex 18");
+				v18.putAttribute("Weight", 70);
+				v18.putAttribute("Size", 143);
+				
+				ImgVertex v19 = graph.getRawGraph().addVertex(19L, "Vertex 19");
+				v19.putAttribute("Weight", 71);
+				v19.putAttribute("Size", 150);
+				
+				ImgVertex v20 = graph.getRawGraph().addVertex(20L, "Vertex 20");
+				v20.putAttribute("Weight", 73);
+				v20.putAttribute("Size", 146);
+				
+				//Create edges
+				v1.addEdge(v2, false, "Friend");
+				v2.addEdge(v3, false, "Friend");
+				v3.addEdge(v4, false, "Friend");
+				v4.addEdge(v5, false, "Friend");
+				v5.addEdge(v6, false, "Friend");
+				v6.addEdge(v7, false, "Friend");
+				v7.addEdge(v8, false, "Friend");
+				v8.addEdge(v9, false, "Friend");
+				v9.addEdge(v10, false, "Friend");
+				
+				v11.addEdge(v12, false, "Friend");
+				v12.addEdge(v13, false, "Friend");
+				v13.addEdge(v14, false, "Friend");
+				v14.addEdge(v15, false, "Friend");
+				v15.addEdge(v16, false, "Friend");
+				v16.addEdge(v17, false, "Friend");
+				v17.addEdge(v18, false, "Friend");
+				v18.addEdge(v19, false, "Friend");
+				v19.addEdge(v20, false, "Friend");
+				
+				v1.addEdge(v11, false, "Friend");
+				v2.addEdge(v12, false, "Friend");
+				v3.addEdge(v13, false, "Friend");
+				v4.addEdge(v14, false, "Friend");
+				v5.addEdge(v15, false, "Friend");
+				v6.addEdge(v16, false, "Friend");
+				v7.addEdge(v17, false, "Friend");
+				v8.addEdge(v18, false, "Friend");
+				v9.addEdge(v19, false, "Friend");
+				v10.addEdge(v20, false, "Friend");
+				
+				graph.stopTransaction(Conclusion.SUCCESS);
 			}
 		}
+	}
+
+	private static List<TreeSet<Long>> buildConnectedGraph(
+			ImgraphGraph graph,
+			int joinElements,
+			List<Tuple<Tuple<String, Object>, List<Tuple<Long, Integer>>>> tuplesList,
+			List<Long> finalPivots,
+			boolean onlyInNeighborhood) {
+		boolean found;
+		List<TreeSet<Long>> rawResults = new ArrayList<TreeSet<Long>>();
+		for (Long pivotID : finalPivots){
+			//Find a connected graph for every entry in result
+			TreeSet<Long> connectedGraph = new TreeSet<Long>();
+			List<Tuple<String,Object>> valueFound = new ArrayList<Tuple<String,Object>>();
+			
+			//First add this vertice
+			ImgVertex vertex = (ImgVertex) graph.getRawGraph().retrieveCell(pivotID);
+			connectedGraph.add(vertex.getId());
+			
+			//Check if we found a value in this vertex
+			found = checkIfNewValueFound(joinElements, tuplesList, valueFound, vertex);
+			
+			
+			//We found maybe the last value needed
+			boolean allFound = false;
+			if (found) //TODO
+				allFound = allValuesFound(joinElements, tuplesList, valueFound);
+			//All researched values are in this vertex
+			if (!found || !allFound){
+				//Need to expand the connectedGraph
+				//TODO not anymore Only add vertices that are in neighborhood of researched values 
+				boolean stop = false;
+				while(!stop){
+					List<Long> newIds = new ArrayList<Long>();
+					for (Long id : connectedGraph){
+						vertex = (ImgVertex) graph.getRawGraph().retrieveCell(id);
+						for (ImgEdge edge : vertex.getEdges()){
+							if (!connectedGraph.contains(edge.getDestCellId())){
+								
+								ImgVertex newVertex = (ImgVertex) graph.getRawGraph().retrieveCell(edge.getDestCellId());
+								
+								if (!onlyInNeighborhood || checkIfValuePresentInNeighborhoodVector(joinElements, tuplesList, newVertex)){
+									newIds.add(newVertex.getId());
+									
+									//Check if we found a value in this vertex
+									found = checkIfNewValueFound(joinElements, tuplesList, valueFound, newVertex);
+									//We found maybe the last value needed
+									allFound = allValuesFound(joinElements, tuplesList, valueFound);
+									//All researched values are in this vertex
+									if (found && allFound)
+										stop = true;
+								}
+							}
+						}
+					}
+					
+					for (Long newId : newIds){
+						if (!connectedGraph.contains(newId))
+								connectedGraph.add(newId);
+					}
+				}
+			}
+
+			//PRUNNING
+			//Removes vertices that don't take away these graph properties :
+			//	-The graph must be connected : checkConnected
+			//	-All researched values must be in the graph : checkValuesPresent
+			
+			boolean modified = true;
+			
+			while (modified){
+				modified = false;
+				List<Long> copy = new ArrayList<Long>(connectedGraph);
+				List<Long> removedIds = new ArrayList<Long>();
+				
+				for (Long id : connectedGraph){
+					copy.remove(id);
+					
+					if (copy.size()!=0 && checkConnected(copy) && checkValuesPresent(joinElements, tuplesList, copy)){
+						modified = true;
+						removedIds.add(id);
+					}
+					else
+						copy.add(id);
+				}
+				for(Long id : removedIds)
+					connectedGraph.remove(id);
+			}
+			//Avoid duplicates
+			if (!rawResults.contains(connectedGraph))
+				rawResults.add(connectedGraph);
+
+		}
+		return rawResults;
+	}
+
+	private static List<Long> expend(List<Long> list) {
+		List<Long> result = new ArrayList<Long>();
+		for(Long id : list){
+			if (!result.contains(id))
+				result.add(id);
+
+			ImgVertex vertex = (ImgVertex) ImgGraph.getInstance().retrieveCell(id);
+			
+			for (ImgEdge edge : vertex.getEdges()){
+				if (!result.contains(edge.getDestCellId()))
+					result.add(edge.getDestCellId());
+			}
+			
+		}
+		return result;
+	}
+
+	
+
+	private static List<Long> updatePivots(List<List<Long>> expendedIds) {
+		List<Long> pivots = new ArrayList<Long>();
+		
+		for (int i = 0; i < expendedIds.size(); i++){
+			List<Long> current = expendedIds.get(i);
+			for (List<Long> list : expendedIds){
+				if (!list.equals(current)){
+					for (Long id : list){
+						if (current.contains(id) && !pivots.contains(id))
+							pivots.add(id);
+					}
+				}
+			}
+		}
+		return pivots;
+	}
+	
+	private static int getListIdLessPivots(List<Long> pivots, List<List<Long>> expendedIds) {
+		int result = 0;
+		int min = 0;
+		int tmp = 0;
+		//INIT min value
+		for (Long pivot : pivots){
+			if (expendedIds.get(0).contains(pivot))
+				min++;
+		}
+
+		for (int i = 0; i < expendedIds.size(); i++){
+			tmp = 0;
+			for (Long pivot : pivots){
+				if (expendedIds.get(i).contains(pivot))
+					tmp++;
+			}
+			if (tmp < min){
+				min = tmp;
+				result = i;
+			}
+		}
+		
+		return result;
+	}
+
+	private static int getListIdNoPivots(List<Long> pivots, List<List<Long>> expendedIds) {
+		int result = -1;
+		boolean present;
+		for (int i = 0; i < expendedIds.size(); i++){
+			present = false;
+			for (Long pivot : pivots){
+				if (expendedIds.get(i).contains(pivot))
+					present = true;
+			}
+			if (!present)
+				result = i;
+		}
+		
+		return result;
+	}
+
+	private static Long checkPivotInAllLists(List<Long> pivots, List<List<Long>> expendedIds) {
+		Long result = null;
+		boolean presentInAll = true;
+		
+		for (Long id : pivots){
+			presentInAll = true;
+			for (List<Long> list : expendedIds){
+				if (!list.contains(id))
+					presentInAll = false;
+			}
+			if (presentInAll)
+				result = id;
+		}
+		
+		return result;
+	}
+
+	private static boolean checkValuesPresent(int joinElements,
+			List<Tuple<	Tuple<String, Object>, 
+						List<Tuple<Long, Integer>>>> tuplesList, 
+			List<Long> connectedGraph) {
+		boolean result = true;
+		
+		for(int i = 0; i<joinElements; i++){
+			String attribute = tuplesList.get(i).getX().getX();
+			Object value = tuplesList.get(i).getX().getY() ;
+			
+			boolean valuePresent = false;
+			
+			for (Long id : connectedGraph){
+				ImgVertex vertex = (ImgVertex) ImgGraph.getInstance().retrieveCell(id);
+				
+				Object vertexValue = vertex.getAttribute(attribute);
+				
+				if (vertexValue != null && vertexValue.equals(value))
+					valuePresent = true;
+			}
+			
+			if (!valuePresent)
+				result = false;
+		}
+		
+		return result;
+	}
+
+	private static boolean checkConnected(List<Long> connectedGraph) {
+		List<Long> checked = new ArrayList<Long>();
+		
+		//Add the first vertex
+		ImgVertex vertex = (ImgVertex) ImgGraph.getInstance().retrieveCell(connectedGraph.get(0));
+		checked.add(vertex.getId());
+		
+		boolean modified = true;
+		while(modified){
+			modified = false;
+			for (Long id : connectedGraph){
+				vertex = (ImgVertex) ImgGraph.getInstance().retrieveCell(id);
+				for (ImgEdge edge : vertex.getEdges()){
+					Long destId = edge.getDestCellId();
+					if (connectedGraph.contains(destId) && !checked.contains(destId) && checked.contains(vertex.getId())){
+						checked.add(destId);
+						modified = true;
+					}
+				}
+				
+			}
+		}
+		
+		boolean result = true;
+		for (Long id : connectedGraph){
+			if (!checked.contains(id))
+				result = false;
+		}
+		
+		return result;
+	}
+
+	private static boolean allValuesFound(
+			int joinElements,
+			List<Tuple<Tuple<String, Object>, List<Tuple<Long, Integer>>>> tuplesList,
+			List<Tuple<String, Object>> valueFound) {
+		boolean allFound = true;
+	
+		for(int i = 0; i<joinElements; i++){
+			String attribute = tuplesList.get(i).getX().getX();
+			Object value = tuplesList.get(i).getX().getY() ;
+			boolean present = false;
+			for(Tuple<String,Object> tuple : valueFound){
+				if (tuple.getX().equals(attribute) && tuple.getY().equals(value)){
+					present = true;
+				}
+			}
+			if (!present)
+				allFound = false;
+		}
+
+		return allFound;
+	}
+
+	private static boolean checkIfValuePresentInNeighborhoodVector(int joinElements, List<Tuple<Tuple<String, Object>, List<Tuple<Long, Integer>>>> tuplesList, ImgVertex vertex) {
+		boolean found = false;
+		Map<String, List<Tuple<Object, Integer>>> vector = vertex.getNeighborhoodVector().getVector();
+		for(int i = 0; i<joinElements; i++){
+			String attribute = tuplesList.get(i).getX().getX();
+			Object value = tuplesList.get(i).getX().getY();
+			
+			for (Entry<String, List<Tuple<Object, Integer>>> entry : vector.entrySet()){
+				if (entry.getKey().equals(attribute)){
+					for (Tuple<Object, Integer> tuple : entry.getValue()){
+						if (tuple.getX().equals(value))
+							found = true;
+					}
+				}
+			}
+			
+		}
+		return found;
 	}	
+	
+	private static boolean checkIfNewValueFound(
+			int joinElements,
+			List<Tuple<Tuple<String, Object>, List<Tuple<Long, Integer>>>> tuplesList,
+			List<Tuple<String, Object>> valueFound, ImgVertex vertex) {
+		boolean found = false;
+		for(int i = 0; i<joinElements; i++){
+			String attribute = tuplesList.get(i).getX().getX();
+			Object value = vertex.getAttribute(attribute);
+			//This vertice contain this attribute
+			if (value != null){
+				//This vertice contain this value
+				if (value.equals(tuplesList.get(i).getX().getY())){
+					
+					//This {attribute, value} has not been found yet.
+					boolean exist = false;
+					for(Tuple<String,Object> tuple : valueFound){
+						if (!exist && tuple.getX().equals(attribute) && tuple.getY().equals(value)){
+							exist = true;
+						}
+					}
+					if (!exist){
+						found = true;
+						valueFound.add(new Tuple<String,Object>(attribute, value));
+					}
+				}
+			}
+			
+		}
+		return found;
+	}
 	
 	public static boolean isNumeric(String inputData) {
 		return inputData.matches("[0-9]+");

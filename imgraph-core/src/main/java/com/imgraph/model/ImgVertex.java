@@ -209,19 +209,38 @@ public class ImgVertex extends Cell {
 	
 	public void removeEdge(ImgEdge edge) {
 		if (!ImgEdge.removeEdgeFromCollection(edge, this.edges))
-			throw new RuntimeException("The edge with id " + edge.getId() + " does not exist in vertex " + 
-							this.getId());
+			throw new RuntimeException(
+					"The edge with id" + edge.getId() + 
+					" does not exist in vertex " + this.getId());
 			
-		this.removeEdgeAddress(edge, StorageTools.getCellAddress(edge.getDestCellId()));
+		long edgeSrcID = edge.getSourceCellId();
+		long edgeDstID = edge.getDestCellId();
+				
+		this.removeEdgeAddress(edge, 
+					StorageTools.getCellAddress(edgeDstID));
 		
-		ImgVertex destVertex = (ImgVertex) ImgGraph.getInstance().retrieveCell(edge.getDestCellId());
+		ImgGraph graph = ImgGraph.getInstance();
 		
-		int addressIndex = ImgGraph.getInstance().getMemberIndex(StorageTools.getCellAddress(edge.getSourceCellId()));
-		ImgEdge invertedEdge = destVertex.getEdge(edge.getSourceCellId(), EdgeType.invertType(edge.getEdgeType()), getName(), 
-				addressIndex);
+		ImgVertex destVertex = 
+					(ImgVertex) graph.retrieveCell(edgeDstID);
 		
-		ImgEdge.removeEdgeFromCollection(invertedEdge, destVertex.edges);
-		destVertex.removeEdgeAddress(invertedEdge, StorageTools.getCellAddress(invertedEdge.getDestCellId())); //FIXED
+		int addressIndex = graph.getMemberIndex(
+					StorageTools.getCellAddress(edgeSrcID));
+		
+		ImgEdge invertedEdge = destVertex.getEdge(
+					edgeSrcID, EdgeType.invertType(
+							edge.getEdgeType()), 
+							getName(), 
+							addressIndex);
+		
+		ImgEdge.removeEdgeFromCollection(
+					invertedEdge, 
+					destVertex.edges);
+		
+		destVertex.removeEdgeAddress(
+					invertedEdge, 
+					StorageTools.getCellAddress(
+							invertedEdge.getDestCellId())); //FIXED
 		
 		CellTransaction cellTransaction = CellTransactionThread.get();
 		
