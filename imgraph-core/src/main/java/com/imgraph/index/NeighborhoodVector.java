@@ -103,13 +103,12 @@ public class NeighborhoodVector implements Serializable{
 			 */
 			Map<Long, NeighborhoodVector> neighborhoodVectorMap = ImgGraph.getInstance().getNeighborhoodVectorMap();
 			neighborhoodVectorMap.put(vertex.getId(), new NeighborhoodVector(vector));
-			//TODO remove old values when removing vertices
-			//System.out.println("\nsetNeighborhoodVectorMap(neighborhoodVectorMap) in NeighborhoodVector");
 			ImgGraph.getInstance().setNeighborhoodVectorMap(neighborhoodVectorMap);
 			
 			/**
 			 * Update modified distant vertices
 			 */
+			//TODO only send messages to relevant machines not all.
 			Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
 			ZMQ.Socket socket = null;
 			ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
@@ -135,7 +134,6 @@ public class NeighborhoodVector implements Serializable{
 						
 						LocalVectorUpdateRepMsg response = (LocalVectorUpdateRepMsg) Message.readFromBytes(socket.recv(0));
 						
-						//System.out.println("\nsetNeighborhoodVectorMap(response.getNeighborhoodVectorMap()) in NeighborhoodVector");
 						ImgGraph.getInstance().setNeighborhoodVectorMap(response.getNeighborhoodVectorMap());
 						
 						socket.close();
@@ -233,7 +231,9 @@ public class NeighborhoodVector implements Serializable{
 				}
 				//Key never seen
 				else{
-					//TODO
+					list = new ArrayList<Tuple<Object,Integer>>();
+					list.add(new Tuple<Object,Integer>(cell.getAttribute(key), value));
+					vector.put(key, list);
 				}
 			}
 		}

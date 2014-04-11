@@ -289,12 +289,10 @@ public class CellTransaction {
 					if (!removedVertices.contains(id)){
 						ImgVertex vertex = (ImgVertex) CacheContainer.getCellCache().get(id);
 						if (vertex != null){
-							if (StorageTools.getCellAddress(id).equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString())){
+							if (StorageTools.getCellAddress(id).equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString()))
 								NeighborhoodVector.updateFullNeighborhoodVector(vertex);
-							}
-							else{
+							else
 								distantIds.add(id);
-							}
 						}
 					}
 				}
