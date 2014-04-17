@@ -7,9 +7,6 @@ import com.imgraph.model.ImgIndexedEdges;
 
 public class LocalNeighborsRepMsg extends Message{
 
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 3673369718973597416L;
 	private Map<Long, ImgIndexedEdges> vertexEdgeMap;
 	
@@ -24,9 +21,5 @@ public class LocalNeighborsRepMsg extends Message{
 
 	public void setVertexEdgeMap(Map<Long, ImgIndexedEdges> vertexEdgeMap) {
 		this.vertexEdgeMap = vertexEdgeMap;
-	}
-
-		
-
-		
+	}	
 }

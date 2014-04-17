@@ -333,6 +333,24 @@ public class TestTools {
 			System.out.println("All possible edges ("+ (range*(range-1)/2) +") have already been created for the "+range+" vertices in the range ["+minId+","+(maxId)+"].");
 	}
 	
+	public static void fullMesh(long minId, long maxId, int numVertices) {
+		ImgraphGraph graph = ImgraphGraph.getInstance();
+		graph.registerItemName("Friend");
+		long startTime = System.nanoTime();    
+		
+		for (long i = minId; i < minId+numVertices; i++){
+			for (long j = i+1; j < minId+numVertices; j++){
+				graph.startTransaction();
+				((ImgVertex) graph.getRawGraph().retrieveCell(i)).addEdge(((ImgVertex) graph.getRawGraph().retrieveCell(j)), false, "Friend");
+				graph.commit();
+				if (i%10 == 0 && j == i+1)
+					System.out.println(i+"/"+numVertices+ " done, elapsed time : " + (System.nanoTime() - startTime) + "ns");
+			}
+		}
+		
+		System.out.println("Elapsed time : " + (System.nanoTime() - startTime) + "ns");
+	}
+	
 	/*return a map containing for every vertices :
 	 * a map containing for every of its edges :
 	 *	    * the id of the dest vertex
@@ -417,9 +435,6 @@ public class TestTools {
 			writer.newLine();
 			//writer.flush();
 		}
-
-
-
 	}
 
 	private static Map<StatisticalIndicators, Double> calculateIndicators(List<Long> traversalTimes) {
@@ -785,5 +800,3 @@ public class TestTools {
 		
 	}
 }
-
-

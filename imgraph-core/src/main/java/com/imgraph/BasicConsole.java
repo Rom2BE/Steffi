@@ -42,8 +42,6 @@ import com.imgraph.networking.NodeServer;
 import com.imgraph.networking.messages.AddressVertexRepMsg;
 import com.imgraph.networking.messages.AddressVertexReqMsg;
 import com.imgraph.networking.messages.LoadMessage;
-import com.imgraph.networking.messages.LocalVectorUpdateRepMsg;
-import com.imgraph.networking.messages.LocalVectorUpdateReqMsg;
 import com.imgraph.networking.messages.MessageType;
 import com.imgraph.networking.messages.LoadMessage.LoadFileType;
 import com.imgraph.networking.messages.Message;
@@ -171,7 +169,6 @@ public class BasicConsole {
 				System.out.println(v);
 			} else if (command.equals("printAll")) {
 				
-				//TODO print indexes
 				Map<Long, NeighborhoodVector> vectorsMap = new TreeMap<Long, NeighborhoodVector>();
 				
 				//Print Vertices and Edges
@@ -246,13 +243,12 @@ public class BasicConsole {
 					totalCount += machineCount;
 					i++;
 				}
-				System.out.println("Total Cell Count = " + totalCount); //TODO Edge Count
+				System.out.println("Total Cell Count = " + totalCount); 
+				//TODO Edge Count
 
 				//Print the attribute index
 				System.out.println(graph.getRawGraph().getAttributeIndex());
 				
-			} else if (command.equals("printNV")) {
-				System.out.println(ImgGraph.getInstance().getNeighborhoodVectorMap());
 			} else if (command.equals("printPortals")) {
 				int vertexCounter = 0;
 				int portalCounter = 0;
@@ -579,7 +575,48 @@ public class BasicConsole {
 				} catch (Exception ex) {
 					ex.printStackTrace();
 				}
-			} else if (command.equals("getAV")) {//TODO getAddressesVertex
+			} else if (command.equals("fullMesh")) {
+				try {	
+					boolean correctInput = true;
+					boolean correctRange = true;
+					int numVertices = 0;
+					long minId = 0;
+					long maxId = 0;
+					
+					command = IOUtils.readLine("Number of vertices: ");
+					if (isNumeric(command))
+						numVertices = Integer.parseInt(command);
+					else 
+						correctInput = false;
+					
+					if(correctInput){
+						command = IOUtils.readLine("Minimum start vertex id: ");
+						if (isNumeric(command))
+							minId = Long.parseLong(command);
+						else 
+							correctInput = false;
+					}
+					
+					if(correctInput){
+						command = IOUtils.readLine("Maximum end vertex id: ");
+						if (isNumeric(command)){
+							maxId = Long.parseLong(command);
+							if ((maxId < minId) || (minId + numVertices) > maxId+1)
+								correctRange = false;
+							else
+								TestTools.fullMesh(minId, maxId, numVertices);
+						}
+						else 
+							correctInput = false;
+					}
+					
+					if(!correctRange || !correctInput)
+						System.out.println("Incorrect Range");
+					
+				} catch (Exception ex) {
+					ex.printStackTrace();
+				}
+			} else if (command.equals("getAddressesVertex")) {
 				List<Long> vertexIds = new ArrayList<Long>();
 				vertexIds.add(1L);
 				vertexIds.add(2L);
@@ -689,7 +726,7 @@ public class BasicConsole {
 						//Find a free id on the target machine
 						long newId = 0;
 						List<Long> vertexIds = new ArrayList<Long>();
-						for (long l = 0; l < id*100; l++){//TODO increase id if no free id found
+						for (long l = 0; l < id*100; l++){//TODO increase id if no free id found WTF? Rewrite that shit
 							vertexIds.add(l);
 						}
 						
@@ -728,18 +765,39 @@ public class BasicConsole {
 				} catch (Exception ex) {
 					ex.printStackTrace();
 				}
-			} else if (command.equals("remove")) { //TODO check if vertex exists.
+			} else if (command.equals("remove")) {
 				command  = IOUtils.readLine("Cell ID: ");
 				
 				if (isNumeric(command)){
+						graph.startTransaction();
+						ImgVertex vertex = (ImgVertex) ImgraphGraph.getInstance().getRawGraph().retrieveCell(Long.parseLong(command));
+						if (vertex != null)
+							vertex.remove();
+						else
+							System.out.println("This vertex does not exist. Please try with an other ID.");
+						graph.commit();	
+				}
+				else 
+					System.out.println("Incorrect Input");
+				
+			} else if (command.equals("removeEdge")) {
+				command  = IOUtils.readLine("Cell ID: ");
+				if (isNumeric(command)){
 					graph.startTransaction();
-					((ImgVertex) ImgraphGraph.getInstance().getRawGraph().retrieveCell(Long.parseLong(command))).remove();
+					ImgVertex vertex = (ImgVertex) ImgraphGraph.getInstance().getRawGraph().retrieveCell(Long.parseLong(command));
+					if (vertex != null){
+						while (vertex.getEdges().size() != 0){
+							vertex.removeEdge(vertex.getEdges().get(0));
+						}
+					}
+					else
+						System.out.println("This vertex does not exist. Please try with an other ID.");
 					graph.commit();
 				}
 				else 
 					System.out.println("Incorrect Input");
 				
-			} else if (command.equals("updateFullVector")) {
+			}/*else if (command.equals("updateFullVector")) {
 				command  = IOUtils.readLine("Cell ID: ");
 				
 				if (isNumeric(command)){
@@ -758,7 +816,7 @@ public class BasicConsole {
 				else 
 					System.out.println("Incorrect Input");
 				
-			} else if (command.equals("getLVI")) { //TODO LocalVertexIds
+			}*/ else if (command.equals("getLVI")) { //LocalVertexIds
 				Map<String, List<Long>> cellIds = TestTools.getCellsID();
 				for(Entry<String, List<Long>> entry : cellIds.entrySet()){
 					System.out.println("Machine : " + entry.getKey());
@@ -1257,7 +1315,7 @@ public class BasicConsole {
 				CacheContainer.getCellCache().clear();
 				//Clear Attribute Index
 				ImgGraph.getInstance().setAttributeIndex(new AttributeIndex());
-				ImgGraph.getInstance().setNewNeighborhoodVectorMap(new HashMap<Long, NeighborhoodVector>());
+				//ImgGraph.getInstance().setNewNeighborhoodVectorMap(new HashMap<Long, NeighborhoodVector>());
 				
 				Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
 				ZMQ.Socket socket = null;
@@ -1295,7 +1353,7 @@ public class BasicConsole {
 				break;
 			}
 			/**
-			 * TODO Search
+			 * Search
 			 */
 			else if (command.equals("assistedSearch")) {
 				System.out.println("\nWelcome in the search assistant!\n");
@@ -1307,7 +1365,6 @@ public class BasicConsole {
 					ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().get(attribute);
 					System.out.println("Values indexed for the attribute " + attribute + " : ");
 					System.out.println(ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().get(attribute).keySet());
-					//TODO must work for Objects
 					
 					String value = IOUtils.readLine("Select a value : ");
 					for (Entry<Object, List<Tuple<Long, Integer>>> valueIndexed : ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().get(attribute).entrySet()){
@@ -1624,42 +1681,38 @@ public class BasicConsole {
 				graph.stopTransaction(Conclusion.SUCCESS);
 			} else if (command.equals("searchTest1")) {
 				graph.registerItemName("Name");
-				graph.registerItemName("A1");
-				graph.registerItemName("A2");
+				graph.registerItemName("City Name");
+				graph.registerItemName("State");
 				graph.registerItemName("Friend");
 				
 				graph.startTransaction();
 				
 				//Create vertices
 				ImgVertex v1 = graph.getRawGraph().addVertex(1L, "Vertex 1");
-				v1.putAttribute("A2", "V1");
+				v1.putAttribute("State", "California");
+				v1.putAttribute("City Name", "Beverly Hills");
 				
 				ImgVertex v2 = graph.getRawGraph().addVertex(2L, "Vertex 2");
-
+				v2.putAttribute("State", "Arizona");
+				v2.putAttribute("City Name", "Phoenix");
+				
 				ImgVertex v3 = graph.getRawGraph().addVertex(3L, "Vertex 3");
 				
 				ImgVertex v4 = graph.getRawGraph().addVertex(4L, "Vertex 4");
-				v4.putAttribute("A1", "V2");
 				
 				ImgVertex v5 = graph.getRawGraph().addVertex(5L, "Vertex 5");
 				
 				ImgVertex v6 = graph.getRawGraph().addVertex(6L, "Vertex 6");
-				v6.putAttribute("A1", "V1");
-
-				ImgVertex v7 = graph.getRawGraph().addVertex(7L, "Vertex 7");
-				
-				ImgVertex v8 = graph.getRawGraph().addVertex(8L, "Vertex 8");
-				v8.putAttribute("A1", "V2");
+				v6.putAttribute("State", "Texas");
+				v6.putAttribute("City Name", "Beverly Hills");
 				
 				//Create edges
 				v1.addEdge(v2, false, "Friend");
 				v2.addEdge(v3, false, "Friend");
-				v2.addEdge(v7, false, "Friend");
-				v3.addEdge(v4, false, "Friend");
+				v2.addEdge(v4, false, "Friend");
 				v3.addEdge(v5, false, "Friend");
+				v4.addEdge(v5, false, "Friend");
 				v5.addEdge(v6, false, "Friend");
-				v5.addEdge(v7, false, "Friend");
-				v7.addEdge(v8, false, "Friend");
 				
 				graph.stopTransaction(Conclusion.SUCCESS);
 			} else if (command.equals("searchTest2")) {
@@ -1784,7 +1837,113 @@ public class BasicConsole {
 				v10.addEdge(v20, false, "Friend");
 				
 				graph.stopTransaction(Conclusion.SUCCESS);
-			}
+			} else if (command.equals("searchTest3")) {
+				graph.registerItemName("Name");
+				graph.registerItemName("Weight");
+				graph.registerItemName("Size");
+				graph.registerItemName("Friend");
+				
+				graph.startTransaction();
+				
+				//Create vertices
+				ImgVertex v1 = graph.getRawGraph().addVertex(1L, "Vertex 1");
+				v1.putAttribute("Size", 185);
+				
+				ImgVertex v2 = graph.getRawGraph().addVertex(2L, "Vertex 2");
+				v2.putAttribute("Weight", 72);
+				
+				ImgVertex v3 = graph.getRawGraph().addVertex(3L, "Vertex 3");
+				v3.putAttribute("Weight", 85);
+				v3.putAttribute("Size", 185);
+				
+				ImgVertex v4 = graph.getRawGraph().addVertex(4L, "Vertex 4");
+				
+				ImgVertex v5 = graph.getRawGraph().addVertex(5L, "Vertex 5");
+				
+				ImgVertex v6 = graph.getRawGraph().addVertex(6L, "Vertex 6");
+				v6.putAttribute("Size", 176);
+
+				ImgVertex v7 = graph.getRawGraph().addVertex(7L, "Vertex 7");
+				
+				ImgVertex v8 = graph.getRawGraph().addVertex(8L, "Vertex 8");
+				//v8.putAttribute("Size", 169);
+				
+				ImgVertex v9 = graph.getRawGraph().addVertex(9L, "Vertex 9");
+				
+				//Create edges
+				v1.addEdge(v2, false, "Friend");
+				v2.addEdge(v3, false, "Friend");
+				v3.addEdge(v4, false, "Friend");
+				v4.addEdge(v5, false, "Friend");
+				v6.addEdge(v7, false, "Friend");
+				v7.addEdge(v3, false, "Friend");
+				v9.addEdge(v8, false, "Friend");
+				v8.addEdge(v3, false, "Friend");
+				
+				graph.stopTransaction(Conclusion.SUCCESS);
+				
+				graph.startTransaction();
+				ImgVertex v10 = graph.getRawGraph().getVertex(1L);
+				v10.putAttribute("Size", "200");
+				
+				ImgVertex v30 = graph.getRawGraph().getVertex(3L);
+				v30.removeAttribute("Weight");
+				
+				graph.stopTransaction(Conclusion.SUCCESS);
+				
+			} else if (command.equals("searchTest4")) {
+				graph.registerItemName("Name");
+				graph.registerItemName("Weight");
+				graph.registerItemName("Size");
+				graph.registerItemName("Friend");
+				
+				graph.startTransaction();
+				
+				//Create vertices
+				ImgVertex v1 = graph.getRawGraph().addVertex(1L, "Vertex 1");
+				v1.putAttribute("Weight", 82);
+				v1.putAttribute("Size", 165);
+				
+				ImgVertex v2 = graph.getRawGraph().addVertex(2L, "Vertex 2");
+				v2.putAttribute("Weight", 81);
+				v2.putAttribute("Size", 162);
+				
+				ImgVertex v3 = graph.getRawGraph().addVertex(3L, "Vertex 3");
+				v3.putAttribute("Weight", 60);
+				v3.putAttribute("Size", 120);
+				graph.stopTransaction(Conclusion.SUCCESS);
+				
+				
+				//Create edges
+				graph.startTransaction();
+				graph.getRawGraph().getVertex(2L).addEdge(graph.getRawGraph().getVertex(3L), false, "Friend");
+				graph.stopTransaction(Conclusion.SUCCESS);
+				
+				graph.startTransaction();
+				graph.getRawGraph().getVertex(1L).addEdge(graph.getRawGraph().getVertex(3L), false, "Friend");
+				graph.stopTransaction(Conclusion.SUCCESS);
+				
+				graph.startTransaction();
+				graph.getRawGraph().getVertex(1L).addEdge(graph.getRawGraph().getVertex(2L), false, "Friend");
+				graph.stopTransaction(Conclusion.SUCCESS);
+				
+				
+				
+				graph.startTransaction();
+				ImgVertex v4 = graph.getRawGraph().addVertex(4L, "Vertex 4");
+				v4.putAttribute("Weight", 93);
+				v4.putAttribute("Size", 187);
+				graph.stopTransaction(Conclusion.SUCCESS);
+				
+				
+				graph.startTransaction();
+				graph.getRawGraph().getVertex(3L).addEdge(graph.getRawGraph().getVertex(4L), false, "Friend");
+				graph.stopTransaction(Conclusion.SUCCESS);
+				
+				graph.startTransaction();
+				graph.getRawGraph().getVertex(1L).addEdge(graph.getRawGraph().getVertex(4L), false, "Friend");
+				graph.stopTransaction(Conclusion.SUCCESS);
+			}  
 		}
 	}
 

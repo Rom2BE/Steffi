@@ -7,7 +7,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -24,7 +23,6 @@ import com.imgraph.common.Configuration.Key;
 import com.imgraph.index.AttributeIndex;
 import com.imgraph.index.ImgIndex;
 import com.imgraph.index.ImgMapIndex;
-import com.imgraph.index.NeighborhoodVector;
 import com.imgraph.loader.ResponseProcessor;
 import com.imgraph.networking.NodeClients;
 import com.imgraph.networking.messages.IdentifiableMessage;
@@ -47,7 +45,6 @@ public class ImgGraph implements Serializable {
 	 */
 	private static final long serialVersionUID = -3640095076173432800L;
 	
-	private Map<Long, NeighborhoodVector> mapNeighborhoodVector;
 	private AttributeIndex attributeIndex;
 	private ImgIndex<ImgVertex> vertexIndex;
 	private ImgIndex<ImgEdge> edgeIndex;
@@ -80,7 +77,6 @@ public class ImgGraph implements Serializable {
 	
 	private ImgGraph() {
 		context = ZMQ.context(1);
-		mapNeighborhoodVector = new TreeMap<Long, NeighborhoodVector>();
 		attributeIndex = new AttributeIndex();
 		vertexIndex = new ImgMapIndex<ImgVertex>(CacheContainer.VERTEX_INDEX_CACHE_NAME, ImgVertex.class, false);
 		edgeIndex = new ImgMapIndex<ImgEdge>(CacheContainer.EDGE_INDEX_CACHE_NAME, ImgEdge.class, false);
@@ -95,82 +91,81 @@ public class ImgGraph implements Serializable {
 		traversalManagerIps = Configuration.getProperty(Key.MANAGER_IPS).split(",");
 	}
 	
+	
 	public ZMQ.Context getZMQContext() {
 		return this.context;
 	}
 	
+	
 	private boolean isLocalCell(long cellId) {
 		return StorageTools.getCellAddress(cellId).equals(localAddress);
 	}
-	
-	public Map<Long, NeighborhoodVector> getNeighborhoodVectorMap(){
-		return mapNeighborhoodVector;
-	}
-	
-	public void setNeighborhoodVectorMap(Map<Long, NeighborhoodVector> mapNeighborhoodVector){
-		this.mapNeighborhoodVector = mapNeighborhoodVector;
-		AttributeIndex.updateAttributeIndex();
-	}
-	
-	public void setNewNeighborhoodVectorMap(Map<Long, NeighborhoodVector> mapNeighborhoodVector){
-		this.mapNeighborhoodVector = mapNeighborhoodVector;
-	}
+
 	
 	public AttributeIndex getAttributeIndex(){
 		return attributeIndex;
 	}
 	
+	
 	public void setAttributeIndex(AttributeIndex attributeIndex){
 		this.attributeIndex = attributeIndex;
 	}
+	
 	
 	public <T extends Cell> ImgIndex<T> getIndex(String indexName, Class<T> className) {
 		return new ImgMapIndex<T>(indexName, className, false);
 	}
 	
+	
 	public ImgIndex<ImgVertex> createVertexIndex(String indexName) {
 		return new ImgMapIndex<ImgVertex>(indexName, ImgVertex.class, true);
 	}
+	
 	
 	public ImgIndex<ImgEdge> createEdgeIndex(String indexName) {
 		return new ImgMapIndex<ImgEdge>(indexName, ImgEdge.class,  true);
 	}
 	
+	
 	public boolean isCompressCells() {
 		return compressCells;
 	}
+	
 	
 	public void initializeMemberIndexes() {
 		memberIndexes.clear();
 		for (Address address : CacheContainer.getCacheContainer().getTransport().getMembers()) 
 			memberIndexes.put(address.toString(), memberIndexes.size());
 		numberOfMembers = memberIndexes.size();
-		
-		
 		nodeClients = new NodeClients(this);
-		
 	}
+	
 	
 	public int getNextTraversalManagerIndex() {
 		int value = traversalManagerTurn.getAndIncrement();	
 		return Math.abs(value%traversalManagerIps.length) ;
 	}
 	
+	
 	public String[] getTraversalManagerIps() {
 		return traversalManagerIps;
 	}
+	
 	
 	public String getNextManagerIp() {
 		return traversalManagerIps[getNextTraversalManagerIndex()];
 	}
 	
+	
 	public String getLocalAddress() {
 		return localAddress;
 	}
 	
+	
 	public int getLocalAddressIndex() {
 		return getMemberIndex(localAddress);
 	}
+	
 	
 	public void sendMessageToNode(int memberIndex, IdentifiableMessage message,
 			ResponseProcessor sender) {
@@ -180,9 +175,11 @@ public class ImgGraph implements Serializable {
 		nodeClients.sendMessage(memberIndex, message, sender);
 	}
 	
+	
 	public int getMemberIndex(String address) {
 		return getMemberIndexes().get(address);
 	}
+	
 	
 	public Map<String, Integer> getMemberIndexes() {
 		if (memberIndexes == null)
@@ -190,6 +187,7 @@ public class ImgGraph implements Serializable {
 		
 		return memberIndexes;
 	}
+	
 	
 	public void storeCell(long cellId, Cell cell) {
 		Cache <Long, Object> cache = CacheContainer.getCellCache();
@@ -200,23 +198,26 @@ public class ImgGraph implements Serializable {
 			cache.put(cellId, cell);
 	}
 	
+	
 	public int getNumberOfMembers() {
 		if (memberIndexes.isEmpty())
 			initializeMemberIndexes();
 		return numberOfMembers;
 	}
 	
+	
 	public void validateEdgeName(String name) {
 		if (name != null && !name.trim().equals("") && !itemNames.containsKey(name))
 			throw new RuntimeException("The edge name '" + name + "' has to be registered in the graph");
 	}
 	
+	
 	public void registerLocalItemName(String name) {
 		int index = itemNames.size();
-		
 		itemNames.put(name, index);
 		reveresItemNames.put(index, name);
 	}
+	
 	
 	public void registerItemName(String name) {
 		if (itemNames.containsKey(name))
@@ -236,39 +237,46 @@ public class ImgGraph implements Serializable {
 		}
 	}
 	
+	
 	public int getItemNameIndex(String name) {
-		
 		if (!itemNames.containsKey(name))
 			return -1;
 		
 		return itemNames.get(name);
 	}
 	
+	
 	public String getItemName(int index) {
 		return reveresItemNames.get(index);
 	}
 	
+	
 	public int getNumberOfEdgeNames() {
 		return itemNames.size();
 	}
+	
 	
 	public ImgVertex addVertex(Long id, String vertexName) {
 		ImgVertex v = new ImgVertex(id, vertexName);
 		return v;
 	}
 	
+	
 	public void startTransaction() {
 		if (! CellTransactionThread.isTransactionSet())
         	CellTransactionFactory.beginTransaction();
 	}
 	
+	
 	public void commit() {
 		stopTransaction(TransactionConclusion.COMMIT);
 	}
 	
+	
 	public void rollback() {
 		stopTransaction(TransactionConclusion.ROLLBACK);
 	}
+	
 	
 	public void stopTransaction(TransactionConclusion transactionConclusion) {
 		if (!CellTransactionThread.isTransactionSet())
@@ -280,29 +288,36 @@ public class ImgGraph implements Serializable {
 			CellTransactionThread.get().rollback();
 	}
 	
+	
 	public boolean storeSerializedCells() {
 		return serializedCells;
 	}
+	
 	
 	public ImgIndex<ImgVertex> getDefaultVertexIndex() {
 		return vertexIndex;
 	}
 	
+	
 	public ImgIndex<ImgEdge> getDefaultEdgeIndex() {	
 		return edgeIndex;
 	}
+	
 	
 	public ImgVertex getVertex(long vertexId) {
 		return (ImgVertex) retrieveCell(vertexId);
 	}
 	
+	
 	public Cell retrieveCell(long cellId){
 		return retrieveCell(cellId, true);
 	}
 	
+	
 	public Cell retrieveRawCell(long cellId) {
 		return retrieveCell(cellId, false);
 	}
+	
 	
 	private Cell retrieveCell(long cellId, boolean transactionSupport){
 		Cache<Long, Object> cellCache = CacheContainer.getCellCache();
@@ -317,7 +332,6 @@ public class ImgGraph implements Serializable {
 		
 		rawCell = (Cell) cellCache.get(cellId);
 		
-		
 		if (rawCell != null) {
 			if (transactionSupport && isLocalCell(cellId)) {
 				cell = rawCell.clone();
@@ -330,14 +344,14 @@ public class ImgGraph implements Serializable {
 			CellTransactionThread.get().addCell(cell);
 		
 		return cell;
-		
 	}
 	
+	
 	public void removeCell(long cellId) {
-		Cache<Long, Cell> cellCache = CacheContainer.getCellCache();
-		
+		Cache<Long, Cell> cellCache = CacheContainer.getCellCache();	//TODO one line?
 		cellCache.remove(cellId);
 	}
+	
 	
 	public Iterable<Long> getCellIds() {
 		Cache<Long, Cell> cellCache = CacheContainer.getCellCache();
@@ -351,6 +365,7 @@ public class ImgGraph implements Serializable {
 		return result;
 	}
 	
+	
 	public Iterable<ImgVertex> getVertices() {
 		List<ImgVertex> result = new ArrayList<ImgVertex>();
 		Map<String, List<Long>> cellsIdMap = TestTools.getCellsID();
@@ -361,6 +376,7 @@ public class ImgGraph implements Serializable {
 		return result;
 	}
 	
+	
 	public ImgVertex getVertexByName(String vertexName) {
 		Cache<Long, Cell> cellCache = CacheContainer.getCellCache();
 		for (Cell cell : cellCache.values()) 
@@ -370,24 +386,29 @@ public class ImgGraph implements Serializable {
 		return null;
 	}
 	
+	
 	protected void checkExistingVertex(String id) {
 		if (CacheContainer.getCellCache().containsKey(id))
 			throw new RuntimeException("There  is already a vertex with id: " + id);
 	}
 	
+	
 	public void removeAll() {
 		CacheContainer.getCellCache().clear();
 	}
+	
 	
 	public void removeIndex (String name) {
 		Cache<Object, Map<Object, Boolean>> indexCache = CacheContainer.getCache(name);
 		indexCache.clear();
 	}
 	
+	
 	public void closeGraphClients() {
 		if (nodeClients != null)
 			nodeClients.close();
 	}
+	
 	
 	public <T extends Cell> Iterator <ImgIndex<T>>  getUserIndexes(final Class<T> indexClass) {
 		final Iterator<String> nameIterator = CacheContainer.getIndexCacheNames().iterator();

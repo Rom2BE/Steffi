@@ -3,7 +3,6 @@ package com.imgraph.networking;
 import gnu.trove.procedure.TLongProcedure;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -22,11 +21,9 @@ import com.imgraph.networking.messages.AddressVertexRepMsg;
 import com.imgraph.networking.messages.AddressVertexReqMsg;
 import com.imgraph.networking.messages.ClusterAddressesRep;
 import com.imgraph.networking.messages.IdentifiableMessage;
-import com.imgraph.networking.messages.LocalNeighborhoodVectorsRemovalUpdateReqMsg;
+import com.imgraph.networking.messages.IndexUpdateReqMsg;
 import com.imgraph.networking.messages.LocalNeighborsRepMsg;
 import com.imgraph.networking.messages.LocalNeighborsReqMsg;
-import com.imgraph.networking.messages.LocalVectorUpdateRepMsg;
-import com.imgraph.networking.messages.LocalVectorUpdateReqMsg;
 import com.imgraph.networking.messages.LocalVertexIdRepMsg;
 import com.imgraph.networking.messages.LocalVertexIdReqMsg;
 import com.imgraph.networking.messages.Message;
@@ -44,9 +41,6 @@ import com.imgraph.storage.StorageTools;
  * Contains the functions called on the arrival of command request messages
  */
 public abstract class CommandProcessor {
-	
-	
-	
 	public static void processLocal2HRequest(Socket socket, final LocalNeighborsReqMsg reqMsg) throws IOException {
 		final LocalNeighborsRepMsg repMsg = new LocalNeighborsRepMsg();
 		
@@ -66,10 +60,12 @@ public abstract class CommandProcessor {
 		socket.send(Message.convertMessageToBytes(repMsg), 0);
 	}
 	
+	
 	public static void processWriteFileRequest(Socket socket, WriteFileReqMsg reqMsg) throws IOException {
 		Message writeResponse = ImgpFileTools.processWriteRequest(reqMsg);
 		socket.send(Message.convertMessageToBytes(writeResponse), 0);
 	}
+	
 	
 	public static void processLocal2HopRequest(Socket socket) throws IOException {
 		Local2HopNeighborProcessor local2HopProc = new Local2HopNeighborProcessor();
@@ -79,7 +75,6 @@ public abstract class CommandProcessor {
 		upd1HNResponse.setBody((updResponse==1)?"OK":"ERROR");
 		
 		socket.send(Message.convertMessageToBytes(upd1HNResponse), 0);
-		
 	}
 
 	
@@ -88,6 +83,7 @@ public abstract class CommandProcessor {
 		addressRep.setAddressesIp(StorageTools.getAddressesIps());
 		socket.send(Message.convertMessageToBytes(addressRep), 0);
 	}
+	
 	
 	public static void processAddressVertexRequest(Socket socket, AddressVertexReqMsg reqMsg) throws IOException {
 		AddressVertexRepMsg response = new AddressVertexRepMsg();
@@ -99,6 +95,7 @@ public abstract class CommandProcessor {
 		else
 			System.out.println("No Vertex found");
 	}
+	
 	
 	public static void processLocalVertexIdRequest(Socket socket, LocalVertexIdReqMsg reqMsg) throws IOException {
 		LocalVertexIdRepMsg response = new LocalVertexIdRepMsg();
@@ -116,68 +113,38 @@ public abstract class CommandProcessor {
 			System.out.println("No Vertex found");
 	}
 	
-	public static void processLocalVectorUpdateRequest(Socket socket,
-			LocalVectorUpdateReqMsg reqMsg) throws IOException {
+	/**
+	 * 
+	 * @param socket
+	 * @param reqMsg
+	 * @throws IOException
+	 */
+	public static void processIndexUpdateRequest(Socket socket,
+			IndexUpdateReqMsg reqMsg) throws IOException {
 		if(reqMsg != null){
-			ImgGraph.getInstance().setNeighborhoodVectorMap(AttributeIndex.mergeNeighborhoodVectorMap (reqMsg.getNeighborhoodVectorMap(), ImgGraph.getInstance().getNeighborhoodVectorMap()));
-
+			
+			Map<Long, Map<String, List<Tuple<Object, Integer>>>> modificationsNeeded = reqMsg.getModificationsNeeded();
+			//Update Neighborhood vectors of local vertices (if modified)
 			Cache<Long, Cell> cache = CacheContainer.getCellCache();
 			for (Long cellId : reqMsg.getCellIds()){
 				//Cell stored on this machine
 				if (StorageTools.getCellAddress(cellId).equals(cache.getCacheManager().getAddress().toString())){
 					ImgVertex vertex = (ImgVertex) cache.get(cellId);
-					if (reqMsg.getUpdateType())
-						NeighborhoodVector.updateFullNeighborhoodVector(vertex);
-					else
-						vertex.setNeighborhoodVector(NeighborhoodVector.updateNeighborhoodVector(vertex));						
+					if (vertex != null)
+						vertex.setNeighborhoodVector(NeighborhoodVector.applyModifications(vertex.getNeighborhoodVector(), modificationsNeeded.get(cellId)));
 				}
 			}
 			
-			LocalVectorUpdateRepMsg response = new LocalVectorUpdateRepMsg("OK");
+			//Update Attribute Index
+			AttributeIndex.applyModifications(modificationsNeeded);
 			
-			response.setNeighborhoodVectorMap(ImgGraph.getInstance().getNeighborhoodVectorMap());
-			
+			//Acknowledgment
+			Message response = new Message(MessageType.INDEX_UPDATE_REP, "OK");
 			socket.send(Message.convertMessageToBytes(response), 0);
 		}
 		else
 			System.out.println("No Vertex found");
 	}	
-	
-	public static void processLocalNeighborhoodVectorRemovalUpdateRequest(
-			Socket socket, LocalNeighborhoodVectorsRemovalUpdateReqMsg reqMsg) throws IOException {
-		if(reqMsg != null){
-			//Update Neighborhood Vectors
-			for (Tuple<Long, Map<String, List<Tuple<Object, Integer>>>> tuple : reqMsg.getModifications()){
-				ImgVertex vertex = (ImgVertex) CacheContainer.getCellCache().get(tuple.getX());
-				if (vertex != null){
-					if (StorageTools.getCellAddress(vertex.getId()).equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString()))	
-						vertex.setNeighborhoodVector(NeighborhoodVector.applyModification(vertex.getNeighborhoodVector(), tuple.getY()));
-				}
-			}
-			
-			//Update Neighborhood Vectors Map
-			ImgGraph.getInstance().setNewNeighborhoodVectorMap(reqMsg.getNeighborhoodVectorMap());
-			
-			//Update Attribute Index
-			ImgGraph.getInstance().setAttributeIndex(reqMsg.getAttributeIndex());
-
-			LocalVectorUpdateRepMsg response = new LocalVectorUpdateRepMsg("OK");
-			
-			socket.send(Message.convertMessageToBytes(response), 0);
-		}
-		else
-			System.out.println("No Vertex found");
-	}
-	
-	public static void processClearAttributeIndexRequest(Socket socket) throws IOException {
-		//Clear Attribute Index
-		ImgGraph.getInstance().setAttributeIndex(new AttributeIndex());
-		ImgGraph.getInstance().setNewNeighborhoodVectorMap(new HashMap<Long, NeighborhoodVector>());
-		
-		Message response = new Message(MessageType.CLEAR_ATTRIBUTE_INDEX_REP, "OK");
-			
-		socket.send(Message.convertMessageToBytes(response), 0);
-	}
 	
 	public static void processCellNumberRequest(Socket socket) throws IOException {
 		Message response = new Message(MessageType.NUMBER_OF_CELLS_REP);

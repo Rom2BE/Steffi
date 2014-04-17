@@ -7,9 +7,12 @@ package com.imgraph.networking.messages;
  * Defines the types of messages handled by Imgraph, each new message type must be registered here. Optionally a 
  * subclass of Message could be implemented for this new message type  
  */
+
+//TODO remove old types
 public enum MessageType  {
 	STOP,
 	CLEAR,
+	CLEAR_ATTRIBUTE_INDEX_REQ,
 	LOAD_REQ,
 	LOAD_REP,
 	SEARCH_REQ,
@@ -33,12 +36,8 @@ public enum MessageType  {
 	CONFIG_CLUSTER_REP,
 	LOCAL_NEIGHBORS_REQ,
 	LOCAL_NEIGHBORS_REP,
-	LOCAL_VECTOR_UPDATE_REQ,
-	LOCAL_VECTOR_UPDATE_REP,
-	LOCAL_NEIGHBORHOODVECTOR_REMOVAL_UPDATE_REQ,
-	LOCAL_NEIGHBORHOODVECTOR_REMOVAL_UPDATE_REP,
-	CLEAR_ATTRIBUTE_INDEX_REQ,
-	CLEAR_ATTRIBUTE_INDEX_REP,
+	INDEX_UPDATE_REQ,
+	INDEX_UPDATE_REP,
 	NUMBER_OF_CELLS_REQ,
 	NUMBER_OF_CELLS_REP,
 	UPD_2HN_TRANSACTION_REQ,

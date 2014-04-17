@@ -5,9 +5,8 @@ import org.zeromq.ZMQ.Context;
 import org.zeromq.ZMQ.Socket;
 
 import com.imgraph.networking.messages.AddressVertexReqMsg;
-import com.imgraph.networking.messages.LocalNeighborhoodVectorsRemovalUpdateReqMsg;
+import com.imgraph.networking.messages.IndexUpdateReqMsg;
 import com.imgraph.networking.messages.LocalNeighborsReqMsg;
-import com.imgraph.networking.messages.LocalVectorUpdateReqMsg;
 import com.imgraph.networking.messages.LocalVertexIdReqMsg;
 import com.imgraph.networking.messages.Message;
 import com.imgraph.networking.messages.Update2HNReqMsg;
@@ -23,16 +22,17 @@ public class CommandWorker implements Runnable {
 	private boolean alive;
 	private String backendURL;
 	
-
 	public CommandWorker(Context context, String backendURL) {
 		super();
 		this.context = context;
 		this.backendURL = backendURL;
 	}
 	
+	
 	public void stop() {
 		alive = false;
 	}
+	
 	
 	@Override
 	public void run() {
@@ -62,17 +62,11 @@ public class CommandWorker implements Runnable {
 				case ADDRESS_VERTEX_REQ: //SYNC
 					CommandProcessor.processAddressVertexRequest(worker, (AddressVertexReqMsg) message);
 					break;
-				case LOCAL_VERTEX_ID_REQ: //?
+				case LOCAL_VERTEX_ID_REQ: //TODO
 					CommandProcessor.processLocalVertexIdRequest(worker, (LocalVertexIdReqMsg) message);
 					break;					
-				case LOCAL_VECTOR_UPDATE_REQ: //?
-					CommandProcessor.processLocalVectorUpdateRequest(worker, (LocalVectorUpdateReqMsg) message);
-					break;
-				case LOCAL_NEIGHBORHOODVECTOR_REMOVAL_UPDATE_REQ: //?
-					CommandProcessor.processLocalNeighborhoodVectorRemovalUpdateRequest(worker, (LocalNeighborhoodVectorsRemovalUpdateReqMsg) message);
-					break;
-				case CLEAR_ATTRIBUTE_INDEX_REQ : //?
-					CommandProcessor.processClearAttributeIndexRequest(worker);
+				case INDEX_UPDATE_REQ: //TODO
+					CommandProcessor.processIndexUpdateRequest(worker, (IndexUpdateReqMsg) message);
 					break;
 				case NUMBER_OF_CELLS_REQ: //SYNC
 					CommandProcessor.processCellNumberRequest(worker);
@@ -81,9 +75,7 @@ public class CommandWorker implements Runnable {
 					CommandProcessor.processUpdate2HNRequest(worker, (Update2HNReqMsg) message);
 				default:
 					break;
-
 				}
-				
 			}
 		} catch (Exception ie) {
 			if (alive)
@@ -91,7 +83,5 @@ public class CommandWorker implements Runnable {
 		} finally {
 			worker.close();
 		}
-
-
 	}
 }
