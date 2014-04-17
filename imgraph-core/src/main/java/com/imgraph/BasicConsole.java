@@ -474,15 +474,17 @@ public class BasicConsole {
 					boolean correctInput = true;
 					boolean correctRange = true;
 					long numVertices = 0;
-					long minId = 0;
+					long minId = 1;
 					long maxId = 0;
 					
 					command = IOUtils.readLine("Number of vertices: ");
-					if (isNumeric(command))
+					if (isNumeric(command)){
 						numVertices = Long.parseLong(command);
+						maxId = numVertices;
+					}
 					else 
 						correctInput = false;
-					
+					/*
 					if(correctInput){
 						command = IOUtils.readLine("Minimum id: ");
 						if (isNumeric(command))
@@ -490,14 +492,16 @@ public class BasicConsole {
 						else 
 							correctInput = false;
 					}
-					
+					*/
 					if(correctInput){
+						/*
 						command = IOUtils.readLine("Maximum id: ");
 						if (isNumeric(command)){
 							maxId = Long.parseLong(command);
 							if (maxId < minId)
 								correctRange = false;
 							else{
+							*/
 								TestTools.genVertices(minId, maxId, numVertices);
 	
 								Map<String, Integer> cellCount = StorageTools.countCellsInCluster();
@@ -507,10 +511,12 @@ public class BasicConsole {
 									totalCount += entry.getValue();
 								}	
 								System.out.println("Total Count = " + totalCount);
+								/*
 							}
 						}
 						else 
 							correctInput = false;
+							*/
 					}
 
 					if(!correctInput)
@@ -535,7 +541,7 @@ public class BasicConsole {
 						numEdges = Integer.parseInt(command);
 					else 
 						correctInput = false;
-					
+					/*
 					if(correctInput){
 						command = IOUtils.readLine("Minimum start vertex id: ");
 						if (isNumeric(command))
@@ -554,16 +560,19 @@ public class BasicConsole {
 						else 
 							correctInput = false;
 					}
-					
+					*/
 					if(correctRange){
 						if(correctInput){
+							/*
 							command = IOUtils.readLine("Directed (Y/N): ");
 							if (command.matches("Y|N")){
 								directed = command.equals("Y");
-								TestTools.genEdges(minId, maxId, numEdges, directed);
-							}
+								*/
+								TestTools.genEdges(1, numEdges, numEdges, false);
+							/*}
 							else 
 								correctInput = false;
+								*/
 						}
 						
 						if(!correctInput)
@@ -580,15 +589,17 @@ public class BasicConsole {
 					boolean correctInput = true;
 					boolean correctRange = true;
 					int numVertices = 0;
-					long minId = 0;
+					long minId = 1;
 					long maxId = 0;
 					
 					command = IOUtils.readLine("Number of vertices: ");
-					if (isNumeric(command))
+					if (isNumeric(command)){
 						numVertices = Integer.parseInt(command);
+						maxId = numVertices;
+					}
 					else 
 						correctInput = false;
-					
+					/*
 					if(correctInput){
 						command = IOUtils.readLine("Minimum start vertex id: ");
 						if (isNumeric(command))
@@ -596,18 +607,22 @@ public class BasicConsole {
 						else 
 							correctInput = false;
 					}
-					
+					*/
 					if(correctInput){
+						/*
 						command = IOUtils.readLine("Maximum end vertex id: ");
 						if (isNumeric(command)){
 							maxId = Long.parseLong(command);
 							if ((maxId < minId) || (minId + numVertices) > maxId+1)
 								correctRange = false;
 							else
+							*/
 								TestTools.fullMesh(minId, maxId, numVertices);
+							/*
 						}
 						else 
 							correctInput = false;
+							*/
 					}
 					
 					if(!correctRange || !correctInput)

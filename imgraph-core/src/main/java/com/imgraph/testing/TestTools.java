@@ -222,7 +222,7 @@ public class TestTools {
 				}
 				v = graph.getVertex(id); //check if this id is already used 
 			} while (v != null); 
-			System.out.println("ID : " + id);
+			//System.out.println("ID : " + id);
 			security = 0;
 			securityLoop = minId-1;
 			graph.startTransaction();
@@ -248,6 +248,8 @@ public class TestTools {
 		boolean fullEdges = false; //Checking if an vertex can create one more edge
 		ImgVertex vertex = null;
 		
+		
+		
 		//Get vertices ID -> stored in cellsId
 		//Check number of vertices found in the range [minId, maxId]
 		int range = 0;
@@ -263,6 +265,8 @@ public class TestTools {
 			}
 		}
 		System.out.println(range + " vertices found in the range ["+minId+","+maxId+"]");
+		long totalTime = 0;
+		
 		
 		//Creating numEdges edges
 		for(int i=0; i<numEdges; i++){
@@ -320,35 +324,45 @@ public class TestTools {
 				
 				//Add a new edge between these two edges.
 				
+				long startTime = System.nanoTime();
+				
 				graph.startTransaction();
 				//v1 & v2 must be included in the transaction
 				((ImgVertex) graph.getRawGraph().retrieveCell(idV1)).addEdge(((ImgVertex) graph.getRawGraph().retrieveCell(idV2)), directed, "Friend");
-				
 				graph.commit();
-
-				System.out.println(idV1 + " & " + idV2 + " are now Friends.");
+				
+				totalTime += (System.nanoTime() - startTime);
+				if ((i%1000) == 0)
+					System.out.println(i+"/"+numEdges+" created, \telapsed : " + totalTime);
+				//System.out.println(idV1 + " & " + idV2 + " are now Friends.");
 			}
 		}
 		if (allFull)
 			System.out.println("All possible edges ("+ (range*(range-1)/2) +") have already been created for the "+range+" vertices in the range ["+minId+","+(maxId)+"].");
+		System.out.println("Elapsed time : " + totalTime + "ns");
 	}
 	
 	public static void fullMesh(long minId, long maxId, int numVertices) {
 		ImgraphGraph graph = ImgraphGraph.getInstance();
 		graph.registerItemName("Friend");
-		long startTime = System.nanoTime();    
+		long totalTime = 0;   
 		
 		for (long i = minId; i < minId+numVertices; i++){
 			for (long j = i+1; j < minId+numVertices; j++){
+				long startTime = System.nanoTime(); 
+				
 				graph.startTransaction();
 				((ImgVertex) graph.getRawGraph().retrieveCell(i)).addEdge(((ImgVertex) graph.getRawGraph().retrieveCell(j)), false, "Friend");
 				graph.commit();
+				
+				totalTime += (System.nanoTime() - startTime);
+				
 				if (i%10 == 0 && j == i+1)
-					System.out.println(i+"/"+numVertices+ " done, elapsed time : " + (System.nanoTime() - startTime) + "ns");
+					System.out.println(i+"/"+numVertices+ " done, elapsed time : " + totalTime + "ns");
 			}
 		}
 		
-		System.out.println("Elapsed time : " + (System.nanoTime() - startTime) + "ns");
+		System.out.println("Elapsed time : " + totalTime + "ns");
 	}
 	
 	/*return a map containing for every vertices :

@@ -62,10 +62,6 @@ public class SearchActor extends UntypedActor{
 	private long logVertices;
 	private long logEdges;
 	
-	
-	
-	
-	
 	private List<ReducedVertexPath>[] addressVerticesInfo;
 	
 	private TLongSet explored2HNeighbors;

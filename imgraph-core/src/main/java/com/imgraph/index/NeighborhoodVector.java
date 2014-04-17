@@ -76,9 +76,7 @@ public class NeighborhoodVector implements Serializable{
 							}
 						}
 						
-						/*
-						 * Value seen for the first time
-						 */
+						//Value seen for the first time
 						if (!valuePresent){
 							List<Tuple<Object, Integer>> list = vector.get(vectorEntry.getKey());
 							list.add(modificationsTuple);
@@ -88,16 +86,12 @@ public class NeighborhoodVector implements Serializable{
 				}
 			}
 			
-			/*
-			 * Attribute seen for the first time
-			 */
+			//Attribute seen for the first time
 			if (!attributePresent){
 				vector.put(modificationsEntry.getKey(), modificationsEntry.getValue());
 			}
 			
-			/*
-			 * Apply removals
-			 */
+			//Apply removals
 			for (Tuple<Object, Integer> t : tupleToRemove){
 				vector.get(modificationsEntry.getKey()).remove(t);
 				if (vector.get(modificationsEntry.getKey()).size() == 0)
