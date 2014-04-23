@@ -4,14 +4,10 @@ import gnu.trove.procedure.TLongProcedure;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 import org.infinispan.Cache;
 import org.zeromq.ZMQ.Socket;
 
-import com.imgraph.index.AttributeIndex;
-import com.imgraph.index.NeighborhoodVector;
-import com.imgraph.index.Tuple;
 import com.imgraph.model.Cell;
 import com.imgraph.model.CellType;
 import com.imgraph.model.ImgGraph;
@@ -155,7 +151,7 @@ public abstract class CommandProcessor {
 	}
 	
 	public static void processUpdate2HNRequest(Socket socket, Update2HNReqMsg update2HNReqMsg) throws IOException {
-		System.out.println("processUpdate2HNRequest");
+		//System.out.println("processUpdate2HNRequest");
 		Local2HopNeighborUpdater.processUpdateRequest(update2HNReqMsg);
 		IdentifiableMessage response = new IdentifiableMessage(MessageType.UPD_2HN_TRANSACTION_REP);
 		response.setBody("OK");

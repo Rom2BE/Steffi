@@ -4,27 +4,17 @@ package com.imgraph.storage;
 
 import gnu.trove.procedure.TIntObjectProcedure;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.Map.Entry;
 
 import javax.transaction.TransactionManager;
 
 import org.infinispan.Cache;
-import org.zeromq.ZMQ;
-
-import akka.actor.Actor;
-import akka.actor.ActorRef;
-import akka.actor.ActorSelection;
-import akka.actor.ActorSystem;
-import akka.actor.Props;
-import akka.actor.UntypedActorFactory;
 
 import com.imgraph.common.Configuration;
 import com.imgraph.common.Configuration.Key;
@@ -32,16 +22,11 @@ import com.imgraph.index.AttributeIndex;
 import com.imgraph.index.ImgIndex;
 import com.imgraph.index.NeighborhoodVector;
 import com.imgraph.index.Tuple;
-import com.imgraph.index.actors.IndexUpdateActor;
 import com.imgraph.model.Cell;
 import com.imgraph.model.CellType;
 import com.imgraph.model.ImgEdge;
 import com.imgraph.model.ImgGraph;
 import com.imgraph.model.ImgVertex;
-import com.imgraph.networking.SearchWorkerManager;
-import com.imgraph.networking.messages.IndexUpdateReqMsg;
-import com.imgraph.networking.messages.Message;
-import com.imgraph.traversal.actors.SearchActor;
 
 
 /**
@@ -411,6 +396,9 @@ public class CellTransaction {
 				
 		closeTransaction();
 		
+		//TODO [Optimization] Merge NeighborhoodVector.applyModifications & AttributeIndex.applyModifications to reduce update complexity
+		
+		
 		/*
 		 * Update Neighborhood Vectors depending on the machine the cell is stored
 		 *    - Stored on this machine : update its neighborhood vector
@@ -440,19 +428,8 @@ public class CellTransaction {
 		/**
 		 * Use Actors
 		 */
-		Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
-		for (Entry<String, String> entry : clusterAddresses.entrySet()) {
-			//Only send this message to other machines
-			if(!entry.getKey().equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString())){
-				IndexUpdateReqMsg requestMessage = new IndexUpdateReqMsg();
-
-				requestMessage.setCellIds(distantIds);
-
-				requestMessage.setModificationsNeeded(modificationsNeeded);
-				
-				ImgGraph.getInstance().getActorRef().tell(new Tuple<String, IndexUpdateReqMsg>(entry.getValue()+":5678" ,requestMessage));
-			}
-		}
+		ImgGraph.getInstance().getActorRef().tell(new Tuple<List<Long>, Map<Long, Map<String, List<Tuple<Object, Integer>>>>>(distantIds, modificationsNeeded));
+		
 		/**
 		 *  Use Blocking messages
 		 *

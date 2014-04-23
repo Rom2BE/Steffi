@@ -2,6 +2,7 @@ package com.imgraph.index.actors;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.infinispan.Cache;
 
@@ -27,12 +28,25 @@ public class IndexUpdateActor extends UntypedActor{
 	@Override
 	public void onReceive(Object message) throws Exception {
 		if(message instanceof Tuple) {
-			System.out.println("Message ready to be sent");
-			ActorRef dest = getContext().actorFor("akka://IndexUpdateDaemon@"+((Tuple<String,IndexUpdateReqMsg>) message).getX()+"/user/indexUpdateActor");
-			dest.tell(((Tuple<String,IndexUpdateReqMsg>) message).getY(), getSelf());
-			System.out.println("Message sent to "+((Tuple<String,IndexUpdateReqMsg>) message).getX());
+			IndexUpdateReqMsg requestMessage = new IndexUpdateReqMsg();
+
+			requestMessage.setCellIds(((Tuple<List<Long>, Map<Long, Map<String, List<Tuple<Object, Integer>>>>>) message).getX());
+
+			requestMessage.setModificationsNeeded(((Tuple<List<Long>, Map<Long, Map<String, List<Tuple<Object, Integer>>>>>) message).getY());
+			
+			Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
+			for (Entry<String, String> entry : clusterAddresses.entrySet()) {
+				//Only send this message to other machines
+				if(!entry.getKey().equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString())){
+					ActorRef dest = getContext().actorFor(
+							"akka://IndexUpdateDaemon@"
+									+ entry.getValue()
+									+ ":5678/user/indexUpdateActor");
+					
+					dest.tell(requestMessage, getSelf());
+				}
+			}
 		} else if (message instanceof IndexUpdateReqMsg){
-			System.out.println("Message received");
 			Map<Long, Map<String, List<Tuple<Object, Integer>>>> modificationsNeeded = ((IndexUpdateReqMsg) message).getModificationsNeeded();
 			//Update Neighborhood vectors of local vertices (if modified)
 			Cache<Long, Cell> cache = CacheContainer.getCellCache();

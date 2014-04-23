@@ -7,7 +7,7 @@ import akka.actor.UntypedActor;
 
 public class ChatActor extends UntypedActor {
 
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "deprecation" })
 	public void onReceive(Object message) throws Exception {
 		if(message instanceof Tuple) {
 			ActorRef dest = getContext().actorFor("akka://ChatDaemon@"+((Tuple<String,String>) message).getX()+"/user/chat");
