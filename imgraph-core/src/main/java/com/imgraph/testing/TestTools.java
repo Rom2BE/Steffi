@@ -54,6 +54,8 @@ import com.tinkerpop.blueprints.impls.imgraph.ImgraphGraph;
 @SuppressWarnings("deprecation")
 public class TestTools {
 	
+	private static long state = 0xCAFEBABE; // initial non-zero value
+	
 	public enum TestFileType{
 		RANDOM,
 		ALL_PATHS,
@@ -228,13 +230,41 @@ public class TestTools {
 			graph.startTransaction();
 			
 			ImgVertex vertex = graph.getRawGraph().addVertex(id, "Vertex "+id);
+			
+			vertex.putAttribute("Size", 80 + random(150));
+			vertex.putAttribute("Weight", 40 + random(100));
+			/*
 			int size = 120+randomGen.nextInt(100);
 			vertex.putAttribute("Size", size);
 			vertex.putAttribute("Weight", size/2);
-			
+			*/
 			graph.stopTransaction(Conclusion.SUCCESS);
 			i++;
+			
+			if ((i%10000) == 0)
+				System.out.println(i+"/"+numVertices+" created");
 		}
+	}
+	
+	
+
+	public static final long nextLong() {
+	  long a=state;
+	  state = xorShift64(a);
+	  return a;
+	}
+
+	public static final long xorShift64(long a) {
+	  a ^= (a << 21);
+	  a ^= (a >>> 35);
+	  a ^= (a << 4);
+	  return a;
+	}
+
+	public static final int random(int n) {
+	  if (n<0) throw new IllegalArgumentException();
+	  long result=((nextLong()>>>32)*n)>>32;
+	  return (int) result;
 	}
 	
 	public static void genEdges(long minId, long maxId,

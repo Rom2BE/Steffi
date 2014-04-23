@@ -175,7 +175,6 @@ public class SearchWorkerManager {
 	
 	
 	
-	
 	@SuppressWarnings("serial")
 	public void sendToSearchWorker(final SearchReqMsg searchReqMsg) throws Exception {
 		
@@ -186,7 +185,7 @@ public class SearchWorkerManager {
 		if (isSearchAlive(searchReqMsg.getSearchId())) {
 		
 			ActorRef searchActor = searchActors.get(searchReqMsg.getSearchId());
-					
+			
 			if (searchActor == null) {
 				searchActor = actorSystem.actorOf(new Props(new UntypedActorFactory() {
 					
@@ -203,8 +202,6 @@ public class SearchWorkerManager {
 	}
 	
 	
-	
-	
 	public void logSearch(UUID searchId) {
 		if (logStatistics) {
 			synchronized (this) {
@@ -217,6 +214,7 @@ public class SearchWorkerManager {
 		}
 		
 	}
+	
 	
 	public void informSearcher(Message[] messages) throws Exception {
 		for (int i=0; i<messages.length; i++) {
@@ -241,6 +239,5 @@ public class SearchWorkerManager {
 			actorSystem.stop(actor);
 		
 		actorSystem.shutdown();
-	}
-	
+	}	
 }

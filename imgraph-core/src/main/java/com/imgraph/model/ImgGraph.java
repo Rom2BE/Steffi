@@ -18,11 +18,16 @@ import org.infinispan.distexec.DistributedExecutorService;
 import org.infinispan.remoting.transport.Address;
 import org.zeromq.ZMQ;
 
+import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
+
 import com.imgraph.common.Configuration;
 import com.imgraph.common.Configuration.Key;
 import com.imgraph.index.AttributeIndex;
 import com.imgraph.index.ImgIndex;
 import com.imgraph.index.ImgMapIndex;
+import com.imgraph.index.actors.IndexUpdateActor;
 import com.imgraph.loader.ResponseProcessor;
 import com.imgraph.networking.NodeClients;
 import com.imgraph.networking.messages.IdentifiableMessage;
@@ -33,6 +38,8 @@ import com.imgraph.storage.CellTransactionThread;
 import com.imgraph.storage.GraphNamesManager;
 import com.imgraph.storage.StorageTools;
 import com.imgraph.testing.TestTools;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 
 /**
  * @author Aldemar Reynaga
@@ -50,6 +57,8 @@ public class ImgGraph implements Serializable {
 	private ImgIndex<ImgEdge> edgeIndex;
 	private boolean serializedCells;
 	private boolean compressCells;
+	private ActorSystem actorSystem;
+	private ActorRef actorRef;
 	
 	private Map<String, Integer> itemNames;
 	private Map<Integer, String> reveresItemNames;
@@ -89,6 +98,22 @@ public class ImgGraph implements Serializable {
 				getCacheManager().getAddress().toString();
 		traversalManagerTurn = new AtomicInteger(0);
 		traversalManagerIps = Configuration.getProperty(Key.MANAGER_IPS).split(",");
+		
+		String ip = "";
+		Map<String, String> ipsMap = StorageTools.getAddressesIps();
+		for(Entry<String, String> entry : ipsMap.entrySet()){
+			if (CacheContainer.getCellCache().getCacheManager().getAddress().toString().equals(entry.getKey()))
+				ip = entry.getValue();
+		}
+		
+		Config config = ConfigFactory.parseString("akka {actor {"
+				+ "provider = \"akka.remote.RemoteActorRefProvider\"},"
+				+ "remote {netty {"
+					+ "hostname = \""+ip+"\","
+					+ "port = 5678}}}");
+		
+		actorSystem = ActorSystem.create("IndexUpdateDaemon", config);
+		actorRef = actorSystem.actorOf(new Props(IndexUpdateActor.class), "indexUpdateActor");
 	}
 	
 	
@@ -109,6 +134,26 @@ public class ImgGraph implements Serializable {
 	
 	public void setAttributeIndex(AttributeIndex attributeIndex){
 		this.attributeIndex = attributeIndex;
+	}
+	
+	
+	public ActorSystem getActorSystem(){
+		return actorSystem;
+	}
+	
+	
+	public void setActorSystem(ActorSystem actorSystem){
+		this.actorSystem = actorSystem;
+	}
+	
+	
+	public ActorRef getActorRef(){
+		return actorRef;
+	}
+	
+	
+	public void setActorRef(ActorRef actorRef){
+		this.actorRef = actorRef;
 	}
 	
 	

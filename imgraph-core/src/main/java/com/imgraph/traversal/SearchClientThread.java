@@ -10,7 +10,7 @@ import com.imgraph.networking.messages.Message;
 
 /**
  * @author Aldemar Reynaga
- * Senders of asynchronous messages used for the comunication among the data servers during a traversal
+ * Senders of asynchronous messages used for the communication among the data servers during a traversal
  * execution
  */
 public class SearchClientThread implements Runnable {
@@ -20,18 +20,12 @@ public class SearchClientThread implements Runnable {
 	
 	
 	public SearchClientThread(ZMQ.Context context, String ipAddress, String address, String searchWorkerId) {
-
 		socket = context.socket(ZMQ.DEALER);
-		
-		
 		String identity =  searchWorkerId + "_" + address + "_" + UUID.randomUUID();
 		socket.setIdentity(identity.getBytes());
 		socket.connect("tcp://" + ipAddress + ":" + Configuration.getProperty(Configuration.Key.NODE_PORT));
 
 		lock = new String(identity);
-		
-	
-	
 	}
 	
 	
@@ -50,7 +44,6 @@ public class SearchClientThread implements Runnable {
 			alive = false;
 			lock.notifyAll();
 		}
-		
 	}
 
 	@Override
@@ -68,9 +61,5 @@ public class SearchClientThread implements Runnable {
 			}
 		} 
 		this.socket.close();
-		
-
-
 	}
-
 }

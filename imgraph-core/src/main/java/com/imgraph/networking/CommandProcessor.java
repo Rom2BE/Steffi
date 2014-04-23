@@ -121,6 +121,7 @@ public abstract class CommandProcessor {
 	 */
 	public static void processIndexUpdateRequest(Socket socket,
 			IndexUpdateReqMsg reqMsg) throws IOException {
+		/*
 		if(reqMsg != null){
 			
 			Map<Long, Map<String, List<Tuple<Object, Integer>>>> modificationsNeeded = reqMsg.getModificationsNeeded();
@@ -144,6 +145,7 @@ public abstract class CommandProcessor {
 		}
 		else
 			System.out.println("No Vertex found");
+		*/
 	}	
 	
 	public static void processCellNumberRequest(Socket socket) throws IOException {

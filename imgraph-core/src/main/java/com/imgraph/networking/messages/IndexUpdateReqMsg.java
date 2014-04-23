@@ -15,6 +15,7 @@ public class IndexUpdateReqMsg extends Message {
 	private List<Long> cellIds;
 	Map<Long, Map<String, List<Tuple<Object, Integer>>>> modificationsNeeded;
 	
+	
 	public List<Long> getCellIds() {
 		return cellIds;
 	}

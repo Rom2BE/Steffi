@@ -11,6 +11,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.Map.Entry;
 
 import javax.transaction.TransactionManager;
@@ -18,19 +19,29 @@ import javax.transaction.TransactionManager;
 import org.infinispan.Cache;
 import org.zeromq.ZMQ;
 
+import akka.actor.Actor;
+import akka.actor.ActorRef;
+import akka.actor.ActorSelection;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
+import akka.actor.UntypedActorFactory;
+
 import com.imgraph.common.Configuration;
 import com.imgraph.common.Configuration.Key;
 import com.imgraph.index.AttributeIndex;
 import com.imgraph.index.ImgIndex;
 import com.imgraph.index.NeighborhoodVector;
 import com.imgraph.index.Tuple;
+import com.imgraph.index.actors.IndexUpdateActor;
 import com.imgraph.model.Cell;
 import com.imgraph.model.CellType;
 import com.imgraph.model.ImgEdge;
 import com.imgraph.model.ImgGraph;
 import com.imgraph.model.ImgVertex;
+import com.imgraph.networking.SearchWorkerManager;
 import com.imgraph.networking.messages.IndexUpdateReqMsg;
 import com.imgraph.networking.messages.Message;
+import com.imgraph.traversal.actors.SearchActor;
 
 
 /**
@@ -202,6 +213,7 @@ public class CellTransaction {
 	}
 	
 	
+	@SuppressWarnings("deprecation")
 	public void commit() {
 		//TODO replace
 		Cache<Long, Object> cache = CacheContainer.getCellCache();
@@ -425,6 +437,25 @@ public class CellTransaction {
 		/*
 		 * Send modifications to other machines
 		 */
+		/**
+		 * Use Actors
+		 */
+		Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
+		for (Entry<String, String> entry : clusterAddresses.entrySet()) {
+			//Only send this message to other machines
+			if(!entry.getKey().equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString())){
+				IndexUpdateReqMsg requestMessage = new IndexUpdateReqMsg();
+
+				requestMessage.setCellIds(distantIds);
+
+				requestMessage.setModificationsNeeded(modificationsNeeded);
+				
+				ImgGraph.getInstance().getActorRef().tell(new Tuple<String, IndexUpdateReqMsg>(entry.getValue()+":5678" ,requestMessage));
+			}
+		}
+		/**
+		 *  Use Blocking messages
+		 *
 		Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
 		ZMQ.Socket socket = null;
 		ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
@@ -457,7 +488,7 @@ public class CellTransaction {
 			if (socket !=null)
 				socket.close();
 		}
-		
+		*/
 	}
 
 	public void rollback() {

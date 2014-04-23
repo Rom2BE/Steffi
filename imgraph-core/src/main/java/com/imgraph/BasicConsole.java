@@ -23,6 +23,10 @@ import org.jgroups.PhysicalAddress;
 import org.jgroups.stack.IpAddress;
 import org.zeromq.ZMQ;
 
+import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
+
 import com.imgraph.common.Configuration;
 import com.imgraph.common.IOUtils;
 import com.imgraph.common.ImgLogger;
@@ -50,6 +54,7 @@ import com.imgraph.storage.FileUtilities;
 import com.imgraph.storage.ImgpFileTools;
 import com.imgraph.storage.Local2HopNeighbors;
 import com.imgraph.storage.StorageTools;
+import com.imgraph.testing.ChatActor;
 import com.imgraph.testing.StatisticalIndicators;
 import com.imgraph.testing.TestTools;
 import com.imgraph.traversal.DistributedTraversal;
@@ -67,6 +72,9 @@ import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.impls.imgraph.ImgraphEdge;
 import com.tinkerpop.blueprints.impls.imgraph.ImgraphGraph;
 import com.tinkerpop.blueprints.impls.imgraph.ImgraphVertex;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+
 
 /**
  * @author Aldemar Reynaga
@@ -75,6 +83,9 @@ import com.tinkerpop.blueprints.impls.imgraph.ImgraphVertex;
  */
 @SuppressWarnings("deprecation")
 public class BasicConsole {
+	
+	static ActorSystem system = null;
+	static ActorRef chat = null;
 	
 	public static void runConsoleNoZeroMQ() throws Exception {
 		runConsole(false);
@@ -502,8 +513,9 @@ public class BasicConsole {
 								correctRange = false;
 							else{
 							*/
+								long startTime = System.nanoTime();
 								TestTools.genVertices(minId, maxId, numVertices);
-	
+								System.out.println("Elapsed time : " + (System.nanoTime() - startTime) + "ns");
 								Map<String, Integer> cellCount = StorageTools.countCellsInCluster();
 								long totalCount = 0;
 								for (Entry<String, Integer> entry : cellCount.entrySet()) {
@@ -1326,7 +1338,7 @@ public class BasicConsole {
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
-			} else if (command.equals("clear")) {
+			} else if (command.equals("clear")) { //TODO bug for several machines
 				CacheContainer.getCellCache().clear();
 				//Clear Attribute Index
 				ImgGraph.getInstance().setAttributeIndex(new AttributeIndex());
@@ -1958,7 +1970,32 @@ public class BasicConsole {
 				graph.startTransaction();
 				graph.getRawGraph().getVertex(1L).addEdge(graph.getRawGraph().getVertex(4L), false, "Friend");
 				graph.stopTransaction(Conclusion.SUCCESS);
-			}  
+			} 
+			/**
+			 * Actors TODO
+			 */
+			//Simple chat using actors
+			else if (command.equals("StartChat")){
+				String ip = "";
+				Map<String, String> ipsMap = StorageTools.getAddressesIps();
+				for(Entry<String, String> entry : ipsMap.entrySet()){
+					if (CacheContainer.getCellCache().getCacheManager().getAddress().toString().equals(entry.getKey()))
+						ip = entry.getValue();
+				}
+				
+				Config config = ConfigFactory.parseString("akka {actor {"
+						+ "provider = \"akka.remote.RemoteActorRefProvider\"},"
+						+ "remote {netty {"
+							+ "hostname = \""+ip+"\","
+							+ "port = 5679}}}");
+				
+				system = ActorSystem.create("ChatDaemon", config);
+				chat = system.actorOf(new Props(ChatActor.class), "chat");
+			} else if (command.equals("chat")){
+				chat.tell(new Tuple<String, String>("10.211.55.3:5679", "TEST 1")); //TODO Replace by a dynamic ip/message 
+			} else if (command.equals("chat2")){
+				chat.tell(new Tuple<String, String>("10.211.55.5:5679", "test 2"));
+			}
 		}
 	}
 
