@@ -372,6 +372,43 @@ public class AttributeIndex implements Serializable {
 			}
 		}
 		
+		/*
+		 * E) 1- Remove values that have been propagated in the removed Cell
+		 *    2- Remove propagated values to this removed vertex
+		 */
+		if (addedKeys == null 
+				&& removedKeys == null
+				&& changedEntries == null
+				&& addedEdges == null
+				&& removedEdges == null){
+			
+			final Map<String, Object> attributesToRemove = new HashMap<String, Object>(); 
+			ImgVertex removedVertex = (ImgVertex) CacheContainer.getCellCache().get(id);
+			if (removedVertex != null){
+				if (removedVertex.getAttributes() != null && !removedVertex.getAttributes().isEmpty()) {
+					final ImgGraph graph = ImgGraph.getInstance();
+					removedVertex.getAttributes().forEachEntry(new TIntObjectProcedure<Object>() {
+						@Override
+						public boolean execute(int keyIndex, Object value) {
+							attributesToRemove.put(graph.getItemName(keyIndex), value);
+							return true;
+						}
+					});
+				}
+			}
+			
+			for (Entry<String, Object> attributeValueToRemove : attributesToRemove.entrySet()){
+				modificationsNeeded = getModificationsNeeded(
+						new ArrayList<Long>(Arrays.asList(id)), 
+						modificationsNeeded, 
+						attributeValueToRemove.getKey(), 
+						attributeValueToRemove.getValue(), 
+						-100);
+			}
+			
+		}
+		
+		
 		//TODO remove edge when no vertex removed
 		
 		return modificationsNeeded;

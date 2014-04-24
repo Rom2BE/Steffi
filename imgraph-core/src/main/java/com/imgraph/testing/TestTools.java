@@ -230,9 +230,9 @@ public class TestTools {
 			graph.startTransaction();
 			
 			ImgVertex vertex = graph.getRawGraph().addVertex(id, "Vertex "+id);
-			
-			vertex.putAttribute("Size", 80 + random(150));
-			vertex.putAttribute("Weight", 40 + random(100));
+			if ((i%10) == 0)
+				vertex.putAttribute("Size", 80 + random(150));
+			//vertex.putAttribute("Weight", 40 + random(100));
 			/*
 			int size = 120+randomGen.nextInt(100);
 			vertex.putAttribute("Size", size);

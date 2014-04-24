@@ -38,81 +38,81 @@ public class CellTransaction {
 	private Map<Long, CellOperations> transactionCells;
 	private Set<Long> removedCellIds;
 	private Map<String, IndexOperation<Cell>> indexOperations;
-	
+
 	public static enum TransactionConclusion {
 		COMMIT,
 		ROLLBACK
 	}
 
-	
+
 	public CellTransaction() {
 		transactionCells = new HashMap<Long, CellOperations>();
 	}
-	
-	
+
+
 	private Set<Long> getRemovedCellIds() {
 		if (removedCellIds == null)
 			removedCellIds = new HashSet<Long>();
 		return removedCellIds;
 	}
-	
-	
+
+
 	private Map<String, IndexOperation<Cell>> getIndexOperations() {
 		if (indexOperations == null)
 			indexOperations = new HashMap<String, IndexOperation<Cell>>();
 		return indexOperations;
 	}
-	
-	
+
+
 	private <T extends Cell> String makeIndexOperationKey(String key, T cell) {
 		return key + "::" + cell.getClass().getSimpleName();
 	}
-	
-	
+
+
 	public <T extends Cell> void putKeyValueIndex(String indexName, String key, Object value, T cell) {
 		getIndexOperation(indexName, key, cell).addKeyValue(key, value, cell);
 	}
-	
-	
+
+
 	public <T extends Cell> void removeKeyValueIndex(String indexName, String key, Object value, T cell) {
 		getIndexOperation(indexName, key, cell).removeKeyValue(key, value, cell);
 	}
-	
-	
+
+
 	@SuppressWarnings("unchecked")
 	private <T extends Cell> IndexOperation<Cell> getIndexOperation(String indexName, String key, T cell) {
 		String indexOpKey = makeIndexOperationKey(key, cell);
 		IndexOperation<Cell> indexOperation = getIndexOperations().get(indexOpKey);
-		
+
 		if (indexOperation == null) {
 			indexOperation = new IndexOperation<Cell>(indexName, (Class<Cell>) cell.getClass());
 			getIndexOperations().put(indexOpKey, indexOperation);
 		}
 		return indexOperation;
 	}
-	
-	
+
+
 	public void addCell(Cell cell) {
 		if (transactionCells.containsKey(cell.getId()))
 			throw new RuntimeException("The cell is already in the transaction");
 		transactionCells.put(cell.getId(), new CellOperations(cell));
 	}
-	
-	
+
+
 	public Cell getCell(long cellId) {
 		CellOperations cellOperations = transactionCells.get(cellId);
 		if (cellOperations != null)
 			return cellOperations.getCell();
 		return null;
 	}
-	
-	
+
+
 	public void removeCell(Cell cell) {
 		getRemovedCellIds().add(cell.getId());
 		transactionCells.get(cell.getId()).setRemovedCell(true);
 	}
-	
-	
+
+
 	private CellOperations getCellOperations(Cell cell) {
 		CellOperations cellOperations =  transactionCells.get(cell.getId());
 		if (cellOperations == null) {
@@ -126,83 +126,83 @@ public class CellTransaction {
 		}
 		return cellOperations;
 	}
-	
-	
+
+
 	public void createCell(Cell cell) {
 		CellOperations cellOperations = new CellOperations(cell);
 		cellOperations.addOperationType(CellOperationType.CREATE_CELL);
 		transactionCells.put(cell.getId(), cellOperations);
 	}
 
-	
+
 	public void addEdge(Cell cell, ImgEdge edge) {
 		CellOperations cellOperations = getCellOperations(cell); 
-		
+
 		if (!getRemovedCellIds().contains(cell.getId()) && !cellOperations.getTypes().contains(CellOperationType.CREATE_CELL)) {
 			cellOperations.addOperationType(CellOperationType.ADD_EDGE);
 			cellOperations.getNewEdges().add(edge);
 		}
 	}
-	
-	
+
+
 	public void removeEdge(Cell cell, ImgEdge edge) {
 		CellOperations cellOperations = getCellOperations(cell);
-		
+
 		if (!getRemovedCellIds().contains(cell.getId())) {
 			getRemovedCellIds().add(edge.getId());
 			cellOperations.addOperationType(CellOperationType.REMOVE_EDGE);
 			cellOperations.getRemovedEdges().add(edge);
 		}
 	}
-	
-	
+
+
 	public void setCellProperty(Cell cell, int keyIndex, Object newValue, Object oldValue) {
 		CellOperations cellOperations = getCellOperations(cell);
-		
+
 		if (!getRemovedCellIds().contains(cell.getId())) {
 			cellOperations.addOperationType(CellOperationType.SET_CELL_PROPERTY);
 			cellOperations.getSetProperties().put(keyIndex, new CellOperations.ModifiedValue(oldValue, newValue));
 		}
 	}
 
-	
+
 	public void removeCellProperty(Cell cell, int keyIndex) {
 		CellOperations cellOperations = getCellOperations(cell);
-		
+
 		if (!getRemovedCellIds().contains(cell.getId())) {
 			cellOperations.addOperationType(CellOperationType.REMOVE_CELL_PROPERTY);
 			cellOperations.getRemovedProperties().add(keyIndex);
 		}
 	}
-	
-	
+
+
 	private void executeCellOperation(Cache<Long, Object> cache,  
 			CellOperations cellOp) {
-		
+
 		if (!cellOp.getCell().getCellType().equals(CellType.EDGE) &&
 				!getRemovedCellIds().contains(cellOp.getCellId()) ) {
 			ImgGraph graph = ImgGraph.getInstance();
 			cellOp.getCell().trimToSize();
-			
+
 			graph.storeCell(cellOp.getCellId(), cellOp.getCell());
 		} 
-		
+
 	}
-	
-	
+
+
 	private void updateIndexes () {
 		for (IndexOperation<Cell> indexOperation : getIndexOperations().values()) {
 			ImgIndex<Cell> index = ImgGraph.getInstance().getIndex(indexOperation.getIndexName(), indexOperation.getClassName());
 			index.commitChanges(indexOperation);
 		}
 	}
-	
-	
+
+
 	@SuppressWarnings("deprecation")
 	public void commit() {
 		//TODO replace
 		Cache<Long, Object> cache = CacheContainer.getCellCache();
-	
+
 		/*
 		 * Save modifications we will apply on the attribute index 
 		 *
@@ -220,27 +220,27 @@ public class CellTransaction {
 		try {
 			if (tm != null)
 				tm.begin();
-				
+
 			if (!transactionCells.isEmpty()) {
-				for (CellOperations cellOp: transactionCells.values())
+				for (CellOperations cellOp: transactionCells.values()){
 					if (!cellOp.getTypes().isEmpty()){
 						//TODO reduce complexity of this part.
 						//Or at least rewrite it
-						
+
 						final Map<String, Object> beforeAttributeMap = new HashMap<String, Object>(); 
 						List<Long> beforeEdges = new ArrayList<Long>();
-						ImgVertex beforeVertex = (ImgVertex) CacheContainer.getCellCache().get(cellOp.getCellId());
+						ImgVertex beforeVertex = (ImgVertex) cache.get(cellOp.getCellId());
 						if (beforeVertex != null){
 							//Check edge modifications
 							for (ImgEdge edge : beforeVertex.getEdges())
 								beforeEdges.add(edge.getDestCellId());
-							
+
 							//Check attribute modifications
 							if (beforeVertex.getAttributes() != null && !beforeVertex.getAttributes().isEmpty()) {
 								final ImgGraph graph = ImgGraph.getInstance();
-								
+
 								beforeVertex.getAttributes().forEachEntry(new TIntObjectProcedure<Object>() {
-	
+
 									@Override
 									public boolean execute(int keyIndex, Object value) {
 										beforeAttributeMap.put(graph.getItemName(keyIndex), value);
@@ -252,21 +252,21 @@ public class CellTransaction {
 						
 						//Execute current cell operation
 						executeCellOperation(cache,cellOp);
-						
+
 						final Map<String, Object> afterAttributeMap = new HashMap<String, Object>(); 
 						List<Long> afterEdges = new ArrayList<Long>();
-						ImgVertex afterVertex = (ImgVertex) CacheContainer.getCellCache().get(cellOp.getCellId());
+						ImgVertex afterVertex = (ImgVertex) cache.get(cellOp.getCellId());
 						if (afterVertex != null){
 							//Check edge modifications
 							for (ImgEdge edge : afterVertex.getEdges())
 								afterEdges.add(edge.getDestCellId());
-							
+
 							//Check attribute modifications
 							if (afterVertex.getAttributes() != null && !afterVertex.getAttributes().isEmpty()) {
 								final ImgGraph graph = ImgGraph.getInstance();
-								
+
 								afterVertex.getAttributes().forEachEntry(new TIntObjectProcedure<Object>() {
-	
+
 									@Override
 									public boolean execute(int keyIndex, Object value) {
 										afterAttributeMap.put(graph.getItemName(keyIndex), value);
@@ -275,7 +275,7 @@ public class CellTransaction {
 								});
 							}
 						}
-						
+
 						Set<String> addedKeys = new HashSet<String>(afterAttributeMap.keySet());
 						addedKeys.removeAll(beforeAttributeMap.keySet());
 
@@ -290,19 +290,19 @@ public class CellTransaction {
 							changedEntries = new HashSet<Tuple<String, Tuple<Object,Object>>>();
 							for (Entry<String, Object> entryChanged : attributesModified){
 								changedEntries.add(new Tuple<String,Tuple<Object,Object>>(entryChanged.getKey(), 
-												   new Tuple<Object,Object>(
-														beforeAttributeMap.get(entryChanged.getKey()), 
-														entryChanged.getValue())
-														));
+										new Tuple<Object,Object>(
+												beforeAttributeMap.get(entryChanged.getKey()), 
+												entryChanged.getValue())
+										));
 							}
 						}
-						
+
 						/*
 						 * Need to know which old value has been removed
 						 */
 						Set<String> attributesRemoved = new HashSet<String>(beforeAttributeMap.keySet());
 						attributesRemoved.removeAll(afterAttributeMap.keySet());
-						
+
 						Set<Tuple<String, Object>> removedKeys = null;
 						if (attributesRemoved.size() != 0){
 							removedKeys = new HashSet<Tuple<String, Object>>();
@@ -313,27 +313,25 @@ public class CellTransaction {
 							}
 						}
 
-						
-						
+
+
 						List<Long> removedEdges = null;
 						List<Long> addedEdges = null;
-						
+
 						if (!beforeEdges.equals(afterEdges)){ //Modified
 							removedEdges = new ArrayList<Long>();
 							addedEdges = new ArrayList<Long>();
-							
+
 							for(Long id : beforeEdges){
 								if (!afterEdges.contains(id))
 									removedEdges.add(id);
 							}
-							
+
 							for(Long id : afterEdges){
 								if (!beforeEdges.contains(id))
 									addedEdges.add(id);
 							}
 						}
-						
-						//System.out.println("\nProcessing Modifications Needed");
 						if (!getRemovedCellIds().contains(cellOp.getCellId())){
 							modificationsNeeded = AttributeIndex.getAttributeIndexModifications(
 									cellOp.getCellId(), 
@@ -347,7 +345,7 @@ public class CellTransaction {
 						else{
 							//Need to know which old value has been removed
 							attributesRemoved = new HashSet<String>(beforeAttributeMap.keySet());
-							
+
 							removedKeys = null;
 							if (attributesRemoved.size() != 0){
 								removedKeys = new HashSet<Tuple<String, Object>>();
@@ -357,7 +355,7 @@ public class CellTransaction {
 											beforeAttributeMap.get(attributeRemoved)));
 								}
 							}
-							
+
 							modificationsNeeded = AttributeIndex.getAttributeIndexModifications(
 									cellOp.getCellId(), 
 									null, 
@@ -367,23 +365,36 @@ public class CellTransaction {
 									null, 
 									modificationsNeeded);
 						}
-						//System.out.println("Modifications Needed : " + modificationsNeeded);
-						//System.out.println("\n\n");
 					}
+				}
 			}
-			
+
 			for (Long cellId : getRemovedCellIds()){
+				//Particular case : remove an edge with no neighbor
+				ImgVertex vertexToRemove = (ImgVertex) cache.get(cellId);
+				if (vertexToRemove != null){
+					List<ImgEdge> edges = vertexToRemove.getEdges();
+					if (edges != null && edges.size() == 0)
+						modificationsNeeded = AttributeIndex.getAttributeIndexModifications(
+								cellId, 
+								null, 
+								null, 
+								null, 
+								null, 
+								null, 
+								modificationsNeeded);
+				}
 				cache.remove(cellId);
 			}
-			
+
 			local2HNUpdater = new Local2HopNeighborUpdater();
 			local2HNUpdater.update2HNList(transactionCells);
-			
+
 			updateIndexes();
-			
+
 			if (tm != null)
 				tm.commit();
-				
+
 		} catch (Exception e) {
 			if (tm != null)
 				try {
@@ -393,12 +404,12 @@ public class CellTransaction {
 				}
 			throw new RuntimeException(e);
 		}
-				
+
 		closeTransaction();
-		
+
 		//TODO [Optimization] Merge NeighborhoodVector.applyModifications & AttributeIndex.applyModifications to reduce update complexity
-		
-		
+
+
 		/*
 		 * Update Neighborhood Vectors depending on the machine the cell is stored
 		 *    - Stored on this machine : update its neighborhood vector
@@ -406,56 +417,59 @@ public class CellTransaction {
 		 */
 		List<Long> distantIds = new ArrayList<Long>();
 		for (Entry<Long, Map<String, List<Tuple<Object, Integer>>>> entry : modificationsNeeded.entrySet()){
-			ImgVertex vertex = (ImgVertex) CacheContainer.getCellCache().get(entry.getKey());
+			ImgVertex vertex = (ImgVertex) cache.get(entry.getKey());
 			if (vertex != null){
 				//Local vertex
-				if (StorageTools.getCellAddress(entry.getKey()).equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString()))
+				if (StorageTools.getCellAddress(entry.getKey()).equals(cache.getCacheManager().getAddress().toString()))
 					vertex.setNeighborhoodVector(NeighborhoodVector.applyModifications(vertex.getNeighborhoodVector(), modificationsNeeded.get(entry.getKey())));
 				//Vertex stored on another machine
 				else
 					distantIds.add(entry.getKey());
 			}
 		}
-		
+
 		/*
 		 * Update Attribute Index
 		 */
 		AttributeIndex.applyModifications(modificationsNeeded);
-		
+
 		/*
 		 * Send modifications to other machines
 		 */
 		/**
 		 * Use Actors
 		 */
-		ImgGraph.getInstance().getActorRef().tell(new Tuple<List<Long>, Map<Long, Map<String, List<Tuple<Object, Integer>>>>>(distantIds, modificationsNeeded));
-		
+		ImgGraph.getInstance().getActorRef().tell(
+				new Tuple<List<Long>, Map<Long, Map<String, List<Tuple<Object, Integer>>>>>(
+						distantIds, 
+						modificationsNeeded));
+
 		/**
 		 *  Use Blocking messages
 		 *
 		Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
 		ZMQ.Socket socket = null;
 		ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
-		
+
 		try {
 			for (Entry<String, String> entry : clusterAddresses.entrySet()) {
 				//Only send this message to other machines
 				if(!entry.getKey().equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString())){
 					socket = context.socket(ZMQ.REQ);
-					
+
 					socket.connect("tcp://" + entry.getValue() + ":" + 
 							Configuration.getProperty(Configuration.Key.NODE_PORT));
-					
+
 					IndexUpdateReqMsg requestMessage = new IndexUpdateReqMsg();
-					
+
 					requestMessage.setCellIds(distantIds);
-					
+
 					requestMessage.setModificationsNeeded(modificationsNeeded);
-						
+
 					socket.send(Message.convertMessageToBytes(requestMessage), 0);
-					
+
 					Message.readFromBytes(socket.recv(0));
-					
+
 					socket.close();
 				}
 			}
@@ -465,7 +479,7 @@ public class CellTransaction {
 			if (socket !=null)
 				socket.close();
 		}
-		*/
+		 */
 	}
 
 	public void rollback() {
@@ -478,13 +492,13 @@ public class CellTransaction {
 
 		if (transactionCells != null)
 			transactionCells.clear();
-		
+
 		if (removedCellIds != null)
 			removedCellIds.clear();
-		
+
 		if (indexOperations != null)
 			indexOperations.clear();
-		
+
 		CellTransactionThread.unset();
 	}
 }
