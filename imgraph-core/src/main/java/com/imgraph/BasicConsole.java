@@ -1654,6 +1654,48 @@ public class BasicConsole {
 						System.out.println("\nSearch results : "+rawResults);
 				}
 				
+			} else if (command.equals("searchTest0")) {
+				graph.registerItemName("Name");
+				graph.registerItemName("Size");
+				graph.registerItemName("Weight");
+				graph.registerItemName("Friend");
+				
+				graph.startTransaction();
+				
+				//Create vertices
+				ImgVertex v1 = graph.getRawGraph().addVertex(1L, "Vertex 1");
+				v1.putAttribute("Weight", 69);
+				v1.putAttribute("Size", 215);
+				
+				ImgVertex v2 = graph.getRawGraph().addVertex(2L, "Vertex 2");
+				v2.putAttribute("Weight", 81);
+				v2.putAttribute("Size", 163);
+
+				ImgVertex v3 = graph.getRawGraph().addVertex(3L, "Vertex 3");
+				v3.putAttribute("Weight", 97);
+				v3.putAttribute("Size", 194);
+				
+				ImgVertex v4 = graph.getRawGraph().addVertex(4L, "Vertex 4");
+				v4.putAttribute("Weight", 66);
+				v4.putAttribute("Size", 133);
+				
+				ImgVertex v5 = graph.getRawGraph().addVertex(5L, "Vertex 5");
+				v5.putAttribute("Weight", 107);
+				v5.putAttribute("Size", 215);
+				
+				ImgVertex v6 = graph.getRawGraph().addVertex(6L, "Vertex 6");
+				v6.putAttribute("Weight", 75);
+				v6.putAttribute("Size", 163);
+				
+				//Create edges
+				v6.addEdge(v2, false, "Friend");
+				v2.addEdge(v1, false, "Friend");
+				v2.addEdge(v3, false, "Friend");
+				v3.addEdge(v4, false, "Friend");
+				v1.addEdge(v4, false, "Friend");
+				v4.addEdge(v5, false, "Friend");
+				
+				graph.stopTransaction(Conclusion.SUCCESS);
 			} else if (command.equals("searchTest")) {
 				graph.registerItemName("Name");
 				graph.registerItemName("Size");
@@ -1995,6 +2037,21 @@ public class BasicConsole {
 				chat.tell(new Tuple<String, String>("10.211.55.3:5679", "TEST 1")); //TODO Replace by a dynamic ip/message 
 			} else if (command.equals("chat2")){
 				chat.tell(new Tuple<String, String>("10.211.55.5:5679", "test 2"));
+			}
+			/**
+			 * Trigger
+			 */
+			else if (command.equals("indexOn")){
+				NeighborhoodVector.indexEnabled = true;
+			}
+			else if (command.equals("indexOff")){
+				NeighborhoodVector.indexEnabled = false;
+			}
+			else if (command.equals("actorsOn")){
+				NeighborhoodVector.actorsEnabled = true;
+			}
+			else if (command.equals("actorsOff")){
+				NeighborhoodVector.actorsEnabled = false;
 			}
 		}
 	}

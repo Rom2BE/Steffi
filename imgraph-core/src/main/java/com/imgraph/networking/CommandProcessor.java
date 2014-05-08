@@ -3,11 +3,16 @@ package com.imgraph.networking;
 import gnu.trove.procedure.TLongProcedure;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.infinispan.Cache;
 import org.zeromq.ZMQ.Socket;
 
+import com.imgraph.index.AttributeIndex;
+import com.imgraph.index.NeighborhoodVector;
+import com.imgraph.index.Tuple;
 import com.imgraph.model.Cell;
 import com.imgraph.model.CellType;
 import com.imgraph.model.ImgGraph;
@@ -117,9 +122,7 @@ public abstract class CommandProcessor {
 	 */
 	public static void processIndexUpdateRequest(Socket socket,
 			IndexUpdateReqMsg reqMsg) throws IOException {
-		/*
 		if(reqMsg != null){
-			
 			Map<Long, Map<String, List<Tuple<Object, Integer>>>> modificationsNeeded = reqMsg.getModificationsNeeded();
 			//Update Neighborhood vectors of local vertices (if modified)
 			Cache<Long, Cell> cache = CacheContainer.getCellCache();
@@ -141,8 +144,16 @@ public abstract class CommandProcessor {
 		}
 		else
 			System.out.println("No Vertex found");
-		*/
 	}	
+	
+	public static void processClearAttributeIndexRequest(Socket socket) throws IOException {
+		//Clear Attribute Index
+		ImgGraph.getInstance().setAttributeIndex(new AttributeIndex());
+		
+		Message response = new Message(MessageType.CLEAR_ATTRIBUTE_INDEX_REP, "OK");
+			
+		socket.send(Message.convertMessageToBytes(response), 0);
+	}
 	
 	public static void processCellNumberRequest(Socket socket) throws IOException {
 		Message response = new Message(MessageType.NUMBER_OF_CELLS_REP);

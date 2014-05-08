@@ -13,6 +13,9 @@ import java.util.Map.Entry;
  * Every vertex stores information about its neighborhood in a NeighbourhoodVector
  */
 public class NeighborhoodVector implements Serializable{
+	
+	public static boolean indexEnabled = true;
+	public static boolean actorsEnabled = true;			//Use actors or blocking messages
 
 	private static final long serialVersionUID = 766758468137921169L;
 	private Map<String, List<Tuple<Object, Integer>>> vector;

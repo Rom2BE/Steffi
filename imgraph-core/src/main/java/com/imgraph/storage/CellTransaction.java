@@ -4,6 +4,7 @@ package com.imgraph.storage;
 
 import gnu.trove.procedure.TIntObjectProcedure;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -15,6 +16,7 @@ import java.util.Map.Entry;
 import javax.transaction.TransactionManager;
 
 import org.infinispan.Cache;
+import org.zeromq.ZMQ;
 
 import com.imgraph.common.Configuration;
 import com.imgraph.common.Configuration.Key;
@@ -27,6 +29,8 @@ import com.imgraph.model.CellType;
 import com.imgraph.model.ImgEdge;
 import com.imgraph.model.ImgGraph;
 import com.imgraph.model.ImgVertex;
+import com.imgraph.networking.messages.IndexUpdateReqMsg;
+import com.imgraph.networking.messages.Message;
 
 
 /**
@@ -202,7 +206,7 @@ public class CellTransaction {
 	public void commit() {
 		//TODO replace
 		Cache<Long, Object> cache = CacheContainer.getCellCache();
-
+		boolean processIndex = NeighborhoodVector.indexEnabled;
 		/*
 		 * Save modifications we will apply on the attribute index 
 		 *
@@ -224,129 +228,87 @@ public class CellTransaction {
 			if (!transactionCells.isEmpty()) {
 				for (CellOperations cellOp: transactionCells.values()){
 					if (!cellOp.getTypes().isEmpty()){
-						//TODO reduce complexity of this part.
-						//Or at least rewrite it
-
+						
 						final Map<String, Object> beforeAttributeMap = new HashMap<String, Object>(); 
 						List<Long> beforeEdges = new ArrayList<Long>();
 						ImgVertex beforeVertex = (ImgVertex) cache.get(cellOp.getCellId());
-						if (beforeVertex != null){
-							//Check edge modifications
-							for (ImgEdge edge : beforeVertex.getEdges())
-								beforeEdges.add(edge.getDestCellId());
-
-							//Check attribute modifications
-							if (beforeVertex.getAttributes() != null && !beforeVertex.getAttributes().isEmpty()) {
-								final ImgGraph graph = ImgGraph.getInstance();
-
-								beforeVertex.getAttributes().forEachEntry(new TIntObjectProcedure<Object>() {
-
-									@Override
-									public boolean execute(int keyIndex, Object value) {
-										beforeAttributeMap.put(graph.getItemName(keyIndex), value);
-										return true;
-									}
-								});
+						if (processIndex){
+							if (beforeVertex != null){
+								//Check edge modifications
+								for (ImgEdge edge : beforeVertex.getEdges())
+									beforeEdges.add(edge.getDestCellId());
+	
+								//Check attribute modifications
+								if (beforeVertex.getAttributes() != null && !beforeVertex.getAttributes().isEmpty()) {
+									final ImgGraph graph = ImgGraph.getInstance();
+	
+									beforeVertex.getAttributes().forEachEntry(new TIntObjectProcedure<Object>() {
+	
+										@Override
+										public boolean execute(int keyIndex, Object value) {
+											beforeAttributeMap.put(graph.getItemName(keyIndex), value);
+											return true;
+										}
+									});
+								}
 							}
 						}
-						
 						//Execute current cell operation
 						executeCellOperation(cache,cellOp);
 
 						final Map<String, Object> afterAttributeMap = new HashMap<String, Object>(); 
 						List<Long> afterEdges = new ArrayList<Long>();
 						ImgVertex afterVertex = (ImgVertex) cache.get(cellOp.getCellId());
-						if (afterVertex != null){
-							//Check edge modifications
-							for (ImgEdge edge : afterVertex.getEdges())
-								afterEdges.add(edge.getDestCellId());
-
-							//Check attribute modifications
-							if (afterVertex.getAttributes() != null && !afterVertex.getAttributes().isEmpty()) {
-								final ImgGraph graph = ImgGraph.getInstance();
-
-								afterVertex.getAttributes().forEachEntry(new TIntObjectProcedure<Object>() {
-
-									@Override
-									public boolean execute(int keyIndex, Object value) {
-										afterAttributeMap.put(graph.getItemName(keyIndex), value);
-										return true;
-									}
-								});
+						
+						if (processIndex){
+							if (afterVertex != null){
+								//Check edge modifications
+								for (ImgEdge edge : afterVertex.getEdges())
+									afterEdges.add(edge.getDestCellId());
+	
+								//Check attribute modifications
+								if (afterVertex.getAttributes() != null && !afterVertex.getAttributes().isEmpty()) {
+									final ImgGraph graph = ImgGraph.getInstance();
+	
+									afterVertex.getAttributes().forEachEntry(new TIntObjectProcedure<Object>() {
+	
+										@Override
+										public boolean execute(int keyIndex, Object value) {
+											afterAttributeMap.put(graph.getItemName(keyIndex), value);
+											return true;
+										}
+									});
+								}
 							}
-						}
-
-						Set<String> addedKeys = new HashSet<String>(afterAttributeMap.keySet());
-						addedKeys.removeAll(beforeAttributeMap.keySet());
-
-						/*
-						 * Need to know which old value has been modified by which new value
-						 */
-						Set<Entry<String, Object>> attributesModified = new HashSet<Entry<String, Object>>(afterAttributeMap.entrySet());
-						attributesModified.removeAll(beforeAttributeMap.entrySet());
-
-						Set<Tuple<String, Tuple<Object,Object>>> changedEntries = null;
-						if (attributesModified.size() != 0){
-							changedEntries = new HashSet<Tuple<String, Tuple<Object,Object>>>();
-							for (Entry<String, Object> entryChanged : attributesModified){
-								changedEntries.add(new Tuple<String,Tuple<Object,Object>>(entryChanged.getKey(), 
-										new Tuple<Object,Object>(
-												beforeAttributeMap.get(entryChanged.getKey()), 
-												entryChanged.getValue())
-										));
+	
+							Set<String> addedKeys = new HashSet<String>(afterAttributeMap.keySet());
+							addedKeys.removeAll(beforeAttributeMap.keySet());
+	
+							/*
+							 * Need to know which old value has been modified by which new value
+							 */
+							Set<Entry<String, Object>> attributesModified = new HashSet<Entry<String, Object>>(afterAttributeMap.entrySet());
+							attributesModified.removeAll(beforeAttributeMap.entrySet());
+	
+							Set<Tuple<String, Tuple<Object,Object>>> changedEntries = null;
+							if (attributesModified.size() != 0){
+								changedEntries = new HashSet<Tuple<String, Tuple<Object,Object>>>();
+								for (Entry<String, Object> entryChanged : attributesModified){
+									changedEntries.add(new Tuple<String,Tuple<Object,Object>>(entryChanged.getKey(), 
+											new Tuple<Object,Object>(
+													beforeAttributeMap.get(entryChanged.getKey()), 
+													entryChanged.getValue())
+											));
+								}
 							}
-						}
-
-						/*
-						 * Need to know which old value has been removed
-						 */
-						Set<String> attributesRemoved = new HashSet<String>(beforeAttributeMap.keySet());
-						attributesRemoved.removeAll(afterAttributeMap.keySet());
-
-						Set<Tuple<String, Object>> removedKeys = null;
-						if (attributesRemoved.size() != 0){
-							removedKeys = new HashSet<Tuple<String, Object>>();
-							for (String attributeRemoved : attributesRemoved){
-								removedKeys.add(new Tuple<String, Object>(
-										attributeRemoved,
-										beforeAttributeMap.get(attributeRemoved)));
-							}
-						}
-
-
-
-						List<Long> removedEdges = null;
-						List<Long> addedEdges = null;
-
-						if (!beforeEdges.equals(afterEdges)){ //Modified
-							removedEdges = new ArrayList<Long>();
-							addedEdges = new ArrayList<Long>();
-
-							for(Long id : beforeEdges){
-								if (!afterEdges.contains(id))
-									removedEdges.add(id);
-							}
-
-							for(Long id : afterEdges){
-								if (!beforeEdges.contains(id))
-									addedEdges.add(id);
-							}
-						}
-						if (!getRemovedCellIds().contains(cellOp.getCellId())){
-							modificationsNeeded = AttributeIndex.getAttributeIndexModifications(
-									cellOp.getCellId(), 
-									addedKeys, 
-									removedKeys, 
-									changedEntries, 
-									addedEdges, 
-									removedEdges, 
-									modificationsNeeded);
-						}
-						else{
-							//Need to know which old value has been removed
-							attributesRemoved = new HashSet<String>(beforeAttributeMap.keySet());
-
-							removedKeys = null;
+	
+							/*
+							 * Need to know which old value has been removed
+							 */
+							Set<String> attributesRemoved = new HashSet<String>(beforeAttributeMap.keySet());
+							attributesRemoved.removeAll(afterAttributeMap.keySet());
+	
+							Set<Tuple<String, Object>> removedKeys = null;
 							if (attributesRemoved.size() != 0){
 								removedKeys = new HashSet<Tuple<String, Object>>();
 								for (String attributeRemoved : attributesRemoved){
@@ -355,34 +317,80 @@ public class CellTransaction {
 											beforeAttributeMap.get(attributeRemoved)));
 								}
 							}
-
-							modificationsNeeded = AttributeIndex.getAttributeIndexModifications(
-									cellOp.getCellId(), 
-									null, 
-									removedKeys, 
-									null, 
-									null, 
-									null, 
-									modificationsNeeded);
+	
+	
+	
+							List<Long> removedEdges = null;
+							List<Long> addedEdges = null;
+	
+							if (!beforeEdges.equals(afterEdges)){ //Modified
+								removedEdges = new ArrayList<Long>();
+								addedEdges = new ArrayList<Long>();
+	
+								for(Long id : beforeEdges){
+									if (!afterEdges.contains(id))
+										removedEdges.add(id);
+								}
+	
+								for(Long id : afterEdges){
+									if (!beforeEdges.contains(id))
+										addedEdges.add(id);
+								}
+							}
+							if (!getRemovedCellIds().contains(cellOp.getCellId())){
+								modificationsNeeded = AttributeIndex.getAttributeIndexModifications(
+										cellOp.getCellId(), 
+										addedKeys, 
+										removedKeys, 
+										changedEntries, 
+										addedEdges, 
+										removedEdges, 
+										modificationsNeeded);
+							}
+							else{
+								//Need to know which old value has been removed
+								attributesRemoved = new HashSet<String>(beforeAttributeMap.keySet());
+	
+								removedKeys = null;
+								if (attributesRemoved.size() != 0){
+									removedKeys = new HashSet<Tuple<String, Object>>();
+									for (String attributeRemoved : attributesRemoved){
+										removedKeys.add(new Tuple<String, Object>(
+												attributeRemoved,
+												beforeAttributeMap.get(attributeRemoved)));
+									}
+								}
+	
+								modificationsNeeded = AttributeIndex.getAttributeIndexModifications(
+										cellOp.getCellId(), 
+										null, 
+										removedKeys, 
+										null, 
+										null, 
+										null, 
+										modificationsNeeded);
+							}
 						}
 					}
 				}
 			}
 
 			for (Long cellId : getRemovedCellIds()){
-				//Particular case : remove an edge with no neighbor
-				ImgVertex vertexToRemove = (ImgVertex) cache.get(cellId);
-				if (vertexToRemove != null){
-					List<ImgEdge> edges = vertexToRemove.getEdges();
-					if (edges != null && edges.size() == 0)
-						modificationsNeeded = AttributeIndex.getAttributeIndexModifications(
-								cellId, 
-								null, 
-								null, 
-								null, 
-								null, 
-								null, 
-								modificationsNeeded);
+				if (processIndex) {
+					//Particular case : remove an edge with no neighbor
+					ImgVertex vertexToRemove = (ImgVertex) cache.get(cellId);
+					if (vertexToRemove != null){
+						List<ImgEdge> edges = vertexToRemove.getEdges();
+						if (edges != null && edges.size() == 0)
+							modificationsNeeded = AttributeIndex.getAttributeIndexModifications(
+									cellId, 
+									null, 
+									null, 
+									null, 
+									null, 
+									null, 
+									modificationsNeeded);
+					}
 				}
 				cache.remove(cellId);
 			}
@@ -409,77 +417,83 @@ public class CellTransaction {
 
 		//TODO [Optimization] Merge NeighborhoodVector.applyModifications & AttributeIndex.applyModifications to reduce update complexity
 
-
-		/*
-		 * Update Neighborhood Vectors depending on the machine the cell is stored
-		 *    - Stored on this machine : update its neighborhood vector
-		 *    - Otherwise : Send message to other machines to update their modified cells
-		 */
-		List<Long> distantIds = new ArrayList<Long>();
-		for (Entry<Long, Map<String, List<Tuple<Object, Integer>>>> entry : modificationsNeeded.entrySet()){
-			ImgVertex vertex = (ImgVertex) cache.get(entry.getKey());
-			if (vertex != null){
-				//Local vertex
-				if (StorageTools.getCellAddress(entry.getKey()).equals(cache.getCacheManager().getAddress().toString()))
-					vertex.setNeighborhoodVector(NeighborhoodVector.applyModifications(vertex.getNeighborhoodVector(), modificationsNeeded.get(entry.getKey())));
-				//Vertex stored on another machine
-				else
-					distantIds.add(entry.getKey());
-			}
-		}
-
-		/*
-		 * Update Attribute Index
-		 */
-		AttributeIndex.applyModifications(modificationsNeeded);
-
-		/*
-		 * Send modifications to other machines
-		 */
-		/**
-		 * Use Actors
-		 */
-		ImgGraph.getInstance().getActorRef().tell(
-				new Tuple<List<Long>, Map<Long, Map<String, List<Tuple<Object, Integer>>>>>(
-						distantIds, 
-						modificationsNeeded));
-
-		/**
-		 *  Use Blocking messages
-		 *
-		Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
-		ZMQ.Socket socket = null;
-		ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
-
-		try {
-			for (Entry<String, String> entry : clusterAddresses.entrySet()) {
-				//Only send this message to other machines
-				if(!entry.getKey().equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString())){
-					socket = context.socket(ZMQ.REQ);
-
-					socket.connect("tcp://" + entry.getValue() + ":" + 
-							Configuration.getProperty(Configuration.Key.NODE_PORT));
-
-					IndexUpdateReqMsg requestMessage = new IndexUpdateReqMsg();
-
-					requestMessage.setCellIds(distantIds);
-
-					requestMessage.setModificationsNeeded(modificationsNeeded);
-
-					socket.send(Message.convertMessageToBytes(requestMessage), 0);
-
-					Message.readFromBytes(socket.recv(0));
-
-					socket.close();
+		if (processIndex){
+	
+			/*
+			 * Update Neighborhood Vectors depending on the machine the cell is stored
+			 *    - Stored on this machine : update its neighborhood vector
+			 *    - Otherwise : Send message to other machines to update their modified cells
+			 */
+			List<Long> distantIds = new ArrayList<Long>();
+			for (Entry<Long, Map<String, List<Tuple<Object, Integer>>>> entry : modificationsNeeded.entrySet()){
+				ImgVertex vertex = (ImgVertex) cache.get(entry.getKey());
+				if (vertex != null){
+					//Local vertex
+					if (StorageTools.getCellAddress(entry.getKey()).equals(cache.getCacheManager().getAddress().toString()))
+						vertex.setNeighborhoodVector(NeighborhoodVector.applyModifications(vertex.getNeighborhoodVector(), modificationsNeeded.get(entry.getKey())));
+					//Vertex stored on another machine
+					else
+						distantIds.add(entry.getKey());
 				}
 			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		} finally {
-			if (socket !=null)
-				socket.close();
+	
+			/*
+			 * Update Attribute Index
+			 */
+			AttributeIndex.applyModifications(modificationsNeeded);
+	
+			/*
+			 * Send modifications to other machines
+			 * Using actors or blocking messages
+			 */
+			/**
+			 * Use Actors
+			 */
+			if (NeighborhoodVector.actorsEnabled){
+				ImgGraph.getInstance().getActorRef().tell(
+					new Tuple<List<Long>, Map<Long, Map<String, List<Tuple<Object, Integer>>>>>(
+							distantIds, 
+							modificationsNeeded));
+			}
+			
+			/**
+			 *  Use Blocking messages
+			 */
+			else {
+				Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
+				ZMQ.Socket socket = null;
+				ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
+		
+				try {
+					for (Entry<String, String> entry : clusterAddresses.entrySet()) {
+						//Only send this message to other machines
+						if(!entry.getKey().equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString())){
+							socket = context.socket(ZMQ.REQ);
+		
+							socket.connect("tcp://" + entry.getValue() + ":" + 
+									Configuration.getProperty(Configuration.Key.NODE_PORT));
+		
+							IndexUpdateReqMsg requestMessage = new IndexUpdateReqMsg();
+		
+							requestMessage.setCellIds(distantIds);
+		
+							requestMessage.setModificationsNeeded(modificationsNeeded);
+		
+							socket.send(Message.convertMessageToBytes(requestMessage), 0);
+		
+							//Message.readFromBytes(socket.recv(0));
+		
+							socket.close();
+						}
+					}
+				} catch (IOException e) {
+					e.printStackTrace();
+				} finally {
+					if (socket !=null)
+						socket.close();
+				}
+			}
 		}
-		 */
 	}
 
 	public void rollback() {

@@ -68,6 +68,9 @@ public class CommandWorker implements Runnable {
 				case INDEX_UPDATE_REQ: //TODO
 					CommandProcessor.processIndexUpdateRequest(worker, (IndexUpdateReqMsg) message);
 					break;
+				case CLEAR_ATTRIBUTE_INDEX_REQ : //?
+					CommandProcessor.processClearAttributeIndexRequest(worker);
+					break;
 				case NUMBER_OF_CELLS_REQ: //SYNC
 					CommandProcessor.processCellNumberRequest(worker);
 					break;
