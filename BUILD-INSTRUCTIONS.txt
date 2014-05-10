@@ -29,6 +29,7 @@ Finally, add the jars to the local maven repository. Assuming you're in the jzmq
 you're running a linux machine of 64 bits, you can run
 
 mvn install:install-file -Dfile=jzmq-2.2.3-SNAPSHOT.jar -DgroupId=org.zeromq -DartifactId=jzmq -Dversion=2.2.3-SNAPSHOT -Dpackaging=jar
+
 mvn install:install-file -Dfile=jzmq-2.2.3-SNAPSHOT-native-amd64-Linux.jar -DgroupId=org.zeromq -DartifactId=jzmq-native -Dversion=2.2.3-SNAPSHOT -Dpackaging=jar
 
 3. Adding Trove to the maven repository
