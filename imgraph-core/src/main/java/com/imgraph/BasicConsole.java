@@ -1342,39 +1342,7 @@ public class BasicConsole {
 					e.printStackTrace();
 				}
 			} else if (command.equals("clear")) {
-				CacheContainer.getCellCache().clear();
-				//Clear Attribute Index
-				ImgGraph.getInstance().setAttributeIndex(new AttributeIndex());
-				
-				Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
-				ZMQ.Socket socket = null;
-				ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
-				
-				try {
-					for (Entry<String, String> entry : clusterAddresses.entrySet()) {
-						//Only send this message to other machines
-						if(!entry.getKey().equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString())){
-							socket = context.socket(ZMQ.REQ);
-							
-							socket.connect("tcp://" + entry.getValue() + ":" + 
-									Configuration.getProperty(Configuration.Key.NODE_PORT));
-							
-							Message requestMessage = new Message(MessageType.CLEAR_ATTRIBUTE_INDEX_REQ);
-							
-							socket.send(Message.convertMessageToBytes(requestMessage), 0);
-							
-							Message.readFromBytes(socket.recv(0));
-							
-							socket.close();
-						}
-					}
-				} catch (IOException e) {
-					e.printStackTrace();
-				}finally {
-					if (socket !=null)
-						socket.close();
-				}
-				System.out.println("Cell cache cleared");
+				clearCaches();
 			} else if (command.equals("exit")) {
 				System.out.println("BYE...");
 				Main.sendStopMessage(Configuration.getProperty(Configuration.Key.NODE_PORT));
@@ -2347,6 +2315,116 @@ public class BasicConsole {
 			else if (command.equals("actorsOff")){
 				NeighborhoodVector.actorsEnabled = false;
 			}
+			else if (command.equals("runGGTests")){ //generates graphs (x vertices & y edges)
+				clearCaches();
+				NeighborhoodVector.testing = true;
+				long minId = 1;
+				
+				command = IOUtils.readLine("Number of machines: ");
+				NeighborhoodVector.numberOfMachines = Integer.parseInt(command);
+				
+				command = IOUtils.readLine("Number of vertices: ");
+				long numVertices = Long.parseLong(command);
+				
+				command = IOUtils.readLine("Number of edges: ");
+				int numEdges = Integer.parseInt(command);
+				
+				long maxId = numVertices;
+				
+				long startTime;
+				long totalTime;
+				
+				//1
+				NeighborhoodVector.indexEnabled = false;
+				NeighborhoodVector.actorsEnabled = false;
+				
+				System.out.println("\n\nRound 1 :");
+				totalTime = 0;
+				for (int i=0; i<10; i++){
+					startTime = System.nanoTime();
+					TestTools.genVertices(minId, maxId, numVertices);
+					if (numEdges > 0)
+						TestTools.genEdges(minId, maxId, numEdges, false);
+					System.out.println("Elapsed time for turn "+(i+1)+" : " + (System.nanoTime() - startTime) + "ns");
+					totalTime += (System.nanoTime() - startTime);
+					clearCaches();
+				}	
+				System.out.println("Total time for round 1 : " + totalTime + "ns");
+				System.out.println("Average time for round 1 : " + (totalTime/10) + "ns");
+				
+				//2
+				NeighborhoodVector.indexEnabled = true;
+				NeighborhoodVector.actorsEnabled = true;
+				
+				System.out.println("\n\nRound 2 :");
+				totalTime = 0;
+				for (int i=0; i<10; i++){
+					startTime = System.nanoTime();
+					TestTools.genVertices(minId, maxId, numVertices);
+					if (numEdges > 0)
+						TestTools.genEdges(minId, maxId, numEdges, false);
+					System.out.println("Elapsed time for turn "+(i+1)+" : " + (System.nanoTime() - startTime) + "ns");
+					totalTime += (System.nanoTime() - startTime);
+					clearCaches();
+				}	
+				System.out.println("Total time for round 2 : " + totalTime + "ns");
+				System.out.println("Average time for round 2 : " + (totalTime/10) + "ns");
+				
+				//3
+				NeighborhoodVector.indexEnabled = true;
+				NeighborhoodVector.actorsEnabled = false;
+
+				System.out.println("\n\nRound 3 :");
+				totalTime = 0;
+				for (int i=0; i<10; i++){
+					startTime = System.nanoTime();
+					TestTools.genVertices(minId, maxId, numVertices);
+					if (numEdges > 0)
+						TestTools.genEdges(minId, maxId, numEdges, false);
+					System.out.println("Elapsed time for turn "+(i+1)+" : " + (System.nanoTime() - startTime) + "ns");
+					totalTime += (System.nanoTime() - startTime);
+					clearCaches();
+				}	
+				System.out.println("Total time for round 3 : " + totalTime + "ns");
+				System.out.println("Average time for round 3 : " + (totalTime/10) + "ns");
+				
+				NeighborhoodVector.testing = false;
+			}
+		}
+	}
+
+	private static void clearCaches() {
+		CacheContainer.getCellCache().clear();
+		//Clear Attribute Index
+		ImgGraph.getInstance().setAttributeIndex(new AttributeIndex());
+		
+		Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
+		ZMQ.Socket socket = null;
+		ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
+		
+		try {
+			for (Entry<String, String> entry : clusterAddresses.entrySet()) {
+				//Only send this message to other machines
+				if(!entry.getKey().equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString())){
+					socket = context.socket(ZMQ.REQ);
+					
+					socket.connect("tcp://" + entry.getValue() + ":" + 
+							Configuration.getProperty(Configuration.Key.NODE_PORT));
+					
+					Message requestMessage = new Message(MessageType.CLEAR_ATTRIBUTE_INDEX_REQ);
+					
+					socket.send(Message.convertMessageToBytes(requestMessage), 0);
+					
+					Message.readFromBytes(socket.recv(0));
+					
+					socket.close();
+				}
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}finally {
+			if (socket !=null)
+				socket.close();
 		}
 	}
 

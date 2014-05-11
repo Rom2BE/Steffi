@@ -230,7 +230,7 @@ public class TestTools {
 			graph.startTransaction();
 			
 			ImgVertex vertex = graph.getRawGraph().addVertex(id, "Vertex "+id);
-			if ((i%10) == 0)
+			//if ((i%10) == 0)
 				vertex.putAttribute("Size", 80 + random(150));
 			//vertex.putAttribute("Weight", 40 + random(100));
 			/*
@@ -240,9 +240,9 @@ public class TestTools {
 			*/
 			graph.stopTransaction(Conclusion.SUCCESS);
 			i++;
-			
-			if ((i%10000) == 0)
-				System.out.println(i+"/"+numVertices+" created");
+			//
+			//if ((i%10000) == 0)
+			//	System.out.println(i+"/"+numVertices+" created");
 		}
 	}
 	
@@ -294,8 +294,8 @@ public class TestTools {
 				}
 			}
 		}
-		System.out.println(range + " vertices found in the range ["+minId+","+maxId+"]");
-		long totalTime = 0;
+		//System.out.println(range + " vertices found in the range ["+minId+","+maxId+"]");
+		//long totalTime = 0;
 		
 		
 		//Creating numEdges edges
@@ -354,22 +354,22 @@ public class TestTools {
 				
 				//Add a new edge between these two edges.
 				
-				long startTime = System.nanoTime();
+				//long startTime = System.nanoTime();
 				
 				graph.startTransaction();
 				//v1 & v2 must be included in the transaction
 				((ImgVertex) graph.getRawGraph().retrieveCell(idV1)).addEdge(((ImgVertex) graph.getRawGraph().retrieveCell(idV2)), directed, "Friend");
 				graph.commit();
 				
-				totalTime += (System.nanoTime() - startTime);
-				if ((i%1000) == 0)
-					System.out.println(i+"/"+numEdges+" created, \telapsed : " + totalTime);
+				//totalTime += (System.nanoTime() - startTime);
+				//if ((i%1000) == 0)
+				//	System.out.println(i+"/"+numEdges+" created, \telapsed : " + totalTime);
 				//System.out.println(idV1 + " & " + idV2 + " are now Friends.");
 			}
 		}
 		if (allFull)
 			System.out.println("All possible edges ("+ (range*(range-1)/2) +") have already been created for the "+range+" vertices in the range ["+minId+","+(maxId)+"].");
-		System.out.println("Elapsed time : " + totalTime + "ns");
+		//System.out.println("Elapsed time : " + totalTime + "ns");
 	}
 	
 	public static void fullMesh(long minId, long maxId, int numVertices) {

@@ -16,6 +16,9 @@ public class NeighborhoodVector implements Serializable{
 	
 	public static boolean indexEnabled = true;
 	public static boolean actorsEnabled = true;			//Use actors or blocking messages
+	
+	public static boolean testing = false;				//Only used in tests
+	public static int numberOfMachines = 1; 			//Only used in tests
 
 	private static final long serialVersionUID = 766758468137921169L;
 	private Map<String, List<Tuple<Object, Integer>>> vector;

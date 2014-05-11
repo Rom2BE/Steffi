@@ -442,55 +442,59 @@ public class CellTransaction {
 			 */
 			AttributeIndex.applyModifications(modificationsNeeded);
 	
-			/*
-			 * Send modifications to other machines
-			 * Using actors or blocking messages
-			 */
-			/**
-			 * Use Actors
-			 */
-			if (NeighborhoodVector.actorsEnabled){
-				ImgGraph.getInstance().getActorRef().tell(
-					new Tuple<List<Long>, Map<Long, Map<String, List<Tuple<Object, Integer>>>>>(
-							distantIds, 
-							modificationsNeeded));
-			}
 			
-			/**
-			 *  Use Blocking messages
-			 */
-			else {
-				Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
-				ZMQ.Socket socket = null;
-				ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
-		
-				try {
-					for (Entry<String, String> entry : clusterAddresses.entrySet()) {
-						//Only send this message to other machines
-						if(!entry.getKey().equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString())){
-							socket = context.socket(ZMQ.REQ);
-		
-							socket.connect("tcp://" + entry.getValue() + ":" + 
-									Configuration.getProperty(Configuration.Key.NODE_PORT));
-		
-							IndexUpdateReqMsg requestMessage = new IndexUpdateReqMsg();
-		
-							requestMessage.setCellIds(distantIds);
-		
-							requestMessage.setModificationsNeeded(modificationsNeeded);
-		
-							socket.send(Message.convertMessageToBytes(requestMessage), 0);
-		
-							//Message.readFromBytes(socket.recv(0));
-		
-							socket.close();
+			if ((NeighborhoodVector.testing && NeighborhoodVector.numberOfMachines > 1)
+					|| !NeighborhoodVector.testing){
+				/*
+				 * Send modifications to other machines
+				 * Using actors or blocking messages
+				 */
+				/**
+				 * Use Actors
+				 */
+				if (NeighborhoodVector.actorsEnabled){
+					ImgGraph.getInstance().getActorRef().tell(
+						new Tuple<List<Long>, Map<Long, Map<String, List<Tuple<Object, Integer>>>>>(
+								distantIds, 
+								modificationsNeeded));
+				}
+				
+				/**
+				 *  Use Blocking messages
+				 */
+				else {
+					Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
+					ZMQ.Socket socket = null;
+					ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
+			
+					try {
+						for (Entry<String, String> entry : clusterAddresses.entrySet()) {
+							//Only send this message to other machines
+							if(!entry.getKey().equals(CacheContainer.getCellCache().getCacheManager().getAddress().toString())){
+								socket = context.socket(ZMQ.REQ);
+			
+								socket.connect("tcp://" + entry.getValue() + ":" + 
+										Configuration.getProperty(Configuration.Key.NODE_PORT));
+			
+								IndexUpdateReqMsg requestMessage = new IndexUpdateReqMsg();
+			
+								requestMessage.setCellIds(distantIds);
+			
+								requestMessage.setModificationsNeeded(modificationsNeeded);
+			
+								socket.send(Message.convertMessageToBytes(requestMessage), 0);
+			
+								//Message.readFromBytes(socket.recv(0));
+			
+								socket.close();
+							}
 						}
+					} catch (IOException e) {
+						e.printStackTrace();
+					} finally {
+						if (socket !=null)
+							socket.close();
 					}
-				} catch (IOException e) {
-					e.printStackTrace();
-				} finally {
-					if (socket !=null)
-						socket.close();
 				}
 			}
 		}
