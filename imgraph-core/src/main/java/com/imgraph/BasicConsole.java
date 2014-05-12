@@ -1464,14 +1464,14 @@ public class BasicConsole {
 				for(int i = 0; i<joinElements; i++){
 					if (!error){
 						System.out.println(ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().keySet());
-						String attribute = IOUtils.readLine("Select an attribute : ");
-						if (ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().keySet().contains(attribute)){
-							System.out.println(ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().get(attribute).keySet());
-							String v1 = IOUtils.readLine("Select its value : ");
-							for (Entry<Object, List<Tuple<Long, Integer>>> valueIndexed : ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().get(attribute).entrySet()){
-								if (valueIndexed.getKey().toString().equals(v1)){
+						String researchedAttribute = IOUtils.readLine("Select an attribute : ");
+						if (ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().keySet().contains(researchedAttribute)){
+							System.out.println(ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().get(researchedAttribute).keySet());
+							String researchedValue = IOUtils.readLine("Select its value : ");
+							for (Entry<Object, List<Tuple<Long, Integer>>> valueIndexed : ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().get(researchedAttribute).entrySet()){
+								if (valueIndexed.getKey().toString().equals(researchedValue)){
 									found = true;
-									tuplesList.add(new Tuple<Tuple<String,Object>, List<Tuple<Long, Integer>>>(new Tuple<String,Object>(attribute, valueIndexed.getKey()), valueIndexed.getValue()));
+									tuplesList.add(new Tuple<Tuple<String,Object>, List<Tuple<Long, Integer>>>(new Tuple<String,Object>(researchedAttribute, valueIndexed.getKey()), valueIndexed.getValue()));
 								}
 							}
 							
@@ -1486,171 +1486,20 @@ public class BasicConsole {
 					}
 				}
 				
-				long startTime = System.nanoTime();
-				
 				if (!error){
-					//First print the values found
-					System.out.println("\nValues indexed");
-					for(int i = 0; i<joinElements; i++)
-						System.out.println(tuplesList.get(i).getX().getX() + " : " + tuplesList.get(i).getX().getY() + " : " + tuplesList.get(i).getY());
-
-					//This HashMap called result will contain vertices laying in the neighborhoods of each researched value.
-					Map<Long, List<Tuple<String, Tuple<Object, Integer>>>> completePivots = new HashMap<Long, List<Tuple<String, Tuple<Object, Integer>>>>();
-					
-					//First tuple : add everything
-					for (Tuple<Long, Integer> intensities1 : tuplesList.get(0).getY()){
-						List<Tuple<String, Tuple<Object, Integer>>> list = new ArrayList<Tuple<String, Tuple<Object, Integer>>>();
-						list.add(new Tuple<String, Tuple<Object, Integer>>(tuplesList.get(0).getX().getX(), new Tuple<Object, Integer>(tuplesList.get(0).getX().getY(), intensities1.getY())));
-						completePivots.put(intensities1.getX(), list);
-					}
-					
-					//Other tuples : add only if already present
-					for(int i = 1; i<joinElements; i++){
-						for (Tuple<Long, Integer> intensities : tuplesList.get(i).getY()){
-							if (completePivots.keySet().contains(intensities.getX())){
-								List<Tuple<String, Tuple<Object, Integer>>> list = completePivots.get(intensities.getX());
-								list.add(new Tuple<String, Tuple<Object, Integer>>(tuplesList.get(i).getX().getX(), new Tuple<Object, Integer>(tuplesList.get(i).getX().getY(), intensities.getY())));
-								completePivots.put(intensities.getX(), list);
-							}
-						}
-					}
-
-					//Clean if not present in all tuples
-					List<Long> idToRemove = new ArrayList<Long>();
-					for (Entry<Long, List<Tuple<String, Tuple<Object, Integer>>>> entry : completePivots.entrySet()){
-						if (entry.getValue().size() < joinElements)
-							idToRemove.add(entry.getKey());
-					}
-					for (Long id : idToRemove)
-						completePivots.remove(id);
-					
-					//Print vertices found
-					System.out.println("\nPivot values : ");
-					for (Entry<Long, List<Tuple<String, Tuple<Object, Integer>>>> entry : completePivots.entrySet())
-						System.out.println(entry.getKey() + " : " + entry.getValue());
-					
-					List<TreeSet<Long>> rawResults;
-					//TODO as explained in the thesis
-					//result is not empty
-					if (completePivots.size() != 0){
-						if (joinElements > 1)
-							rawResults = buildConnectedGraph(graph, joinElements, tuplesList, new ArrayList(completePivots.keySet()), true);
-						else{
-							rawResults = new ArrayList<TreeSet<Long>>();
-							for (Entry<Long, List<Tuple<String, Tuple<Object, Integer>>>> entry : completePivots.entrySet()){
-								System.out.println(entry.getKey() + " : " + entry.getValue());
-								
-								String researchedAttribute = tuplesList.get(0).getX().getX();
-								Object researchedValue = tuplesList.get(0).getX().getY();
-								
-								ImgVertex vertex = (ImgVertex) graph.getRawGraph().retrieveCell(entry.getKey());
-								Object value = vertex.getAttribute(researchedAttribute);
-								
-								//This vertice contain this attribute
-								if (value != null){
-									//This vertice contains the researched value
-									if (value.equals(researchedValue)){
-										TreeSet<Long> results = new TreeSet<Long>();
-										results.add(entry.getKey());
-										rawResults.add(results);
-									}
-								}
-							}
-						}
-					}
-					//result is empty, the neighborhoods are not overlapping
+					List<TreeSet<Long>> rawResults = TestTools.joinMultipleSearch(
+							graph, 
+							joinElements, 
+							tuplesList);
+					if (rawResults == null)
+						System.out.println("We have not been able to build a connected graph containing all your given attribute values.");
 					else{
-						System.out.println("Neighborhood are not overlapping, we will extend them");
-						
-						System.out.println("\nValues indexed");
-						for(int i = 0; i<joinElements; i++)
-							System.out.println(tuplesList.get(i).getX().getX() + " : " + tuplesList.get(i).getX().getY() + " : " + tuplesList.get(i).getY());
-						
-						List<List<Long>> expendedIds = new ArrayList<List<Long>>();
-						
-						//Fill expendedIds with values indexed intensities list.
-						for(int i = 0; i<joinElements; i++){
-							List<Long> ids = new ArrayList<Long>();
-							for (Tuple<Long, Integer> tuple : tuplesList.get(i).getY())
-								ids.add(tuple.getX());
-							
-							expendedIds.add(ids);
-						}
-						
-						System.out.println("Expended Ids : " + expendedIds);
-						
-						List<Long> pivots = updatePivots(expendedIds);
-						
-						System.out.println("Pivots : " + pivots);
-						if (joinElements > 1){
-							while (checkPivotInAllLists(pivots, expendedIds) == null){ //null if no pivots present in all Lists
-								int id = getListIdNoPivots(pivots, expendedIds);//id of a list containing no pivots
-								
-								if (id == -1){
-									id = getListIdLessPivots(pivots, expendedIds);//id of a list containing less pivots than other lists
-								}
-								
-								List<Long> expendedList = expend(expendedIds.get(id));
-								expendedIds.remove(id);
-								expendedIds.add(expendedList);
-								
-								pivots = updatePivots(expendedIds);
-								
-							}
-						}
-						
-						
-						System.out.println("Expended Ids : " + expendedIds);
-						System.out.println("Pivots : " + pivots);
-						//Only keep pivots present in all neighborhoods
-						List<Long> expandedCompletePivots = new ArrayList<Long>();
-						
-						boolean presentInAll;
-						for (Long id : pivots){
-							presentInAll = true;
-							for (List<Long> list : expendedIds){
-								if (!list.contains(id))
-									presentInAll = false;
-							}
-							if (presentInAll)
-								expandedCompletePivots.add(id);
-						}
-						System.out.println("Final pivots : " + expandedCompletePivots);
-						
-
-						rawResults = buildConnectedGraph(graph, joinElements, tuplesList, expandedCompletePivots, false);
+						if (rawResults.size() < 2)
+							System.out.println("\nSearch result : "+rawResults);
+						else
+							System.out.println("\nSearch results : "+rawResults);
 					}
-					
-					//REMOVE RESULTS BIGGER THAN OTHERS
-					boolean modified = true;
-					
-					while (modified){
-						modified = false;
-						List<TreeSet<Long>> toRemove = new ArrayList<TreeSet<Long>>();
-						if (rawResults.size() != 0){
-							int size = rawResults.get(0).size();
-							for (TreeSet<Long> list : rawResults){
-								if (list.size() > size)
-									toRemove.add(list);
-								else if (list.size() < size){
-									size = list.size();
-									modified = true;
-								}
-							}
-							
-							for (TreeSet<Long> list : toRemove)
-								rawResults.remove(list);
-						}
-					}
-
-					//PRINT FINAL RESULTS
-					if (rawResults.size() < 2)
-						System.out.println("\nSearch result : "+rawResults);
-					else
-						System.out.println("\nSearch results : "+rawResults);
 				}
-				
-				System.out.println("Elapsed time : " + (System.nanoTime() - startTime) + "ns");
 				
 				
 			} else if (command.equals("manualJoinSearch")) {
@@ -1683,195 +1532,22 @@ public class BasicConsole {
 					}
 				}
 				
-				long startTime = System.nanoTime();
-				
-				//Check, for each vertex, if it contains the researched attributes
-				for (Entry<String, List<Long>> machineList : TestTools.getCellsID().entrySet()){
-					for (Long id : machineList.getValue()){
-						ImgVertex vertex = graph.getRawGraph().getVertex(id);
-						
-						//Get its map of attribute-value
-						final Map<String, Object> attributeMap = new HashMap<String, Object>(); 
-						if (vertex != null){
-							if (vertex.getAttributes() != null && !vertex.getAttributes().isEmpty()) {
-								final ImgGraph g = ImgGraph.getInstance();
-								vertex.getAttributes().forEachEntry(new TIntObjectProcedure<Object>() {
-									@Override
-									public boolean execute(int keyIndex, Object value) {
-										attributeMap.put(g.getItemName(keyIndex), value);
-										return true;
-									}
-								});
-							}
-						}
-						
-						//Check, for each vertex, if it contains the researched attributes
-						for (Tuple<String,String> researchedValue : userInput){
-							Object value = attributeMap.get(researchedValue.getX());
-							if (value != null && value.toString().equals(researchedValue.getY())){
-								//This vertex contains a researched attribute value
-								//Need to add it to tupleList
-								for (Tuple<Tuple<String,Object>, List<Tuple<Long, Integer>>> tuple : tuplesList){
-									if (tuple.getX().getX().equals(researchedValue.getX())
-											&& tuple.getX().getY().equals(researchedValue.getY())){
-										tuple.getY().add(new Tuple<Long, Integer>(id, 100));
-									}
-								}
-							}
-						}
-					}
-				}
-				
-				//Do the normal search process.
 				if (!error){
-					//First print the values found
-					System.out.println("\nValues researched");
-					for(int i = 0; i<joinElements; i++)
-						System.out.println(tuplesList.get(i).getX().getX() + " : " + tuplesList.get(i).getX().getY() + " : " + tuplesList.get(i).getY());
-
-					//This HashMap called result will contain vertices laying in the neighborhoods of each researched value.
-					Map<Long, List<Tuple<String, Tuple<Object, Integer>>>> result = new HashMap<Long, List<Tuple<String, Tuple<Object, Integer>>>>();
+					List<TreeSet<Long>> rawResults = TestTools.manualJoinSearch(
+							graph, 
+							joinElements, 
+							userInput,
+							tuplesList);
 					
-					//First tuple : add everything
-					for (Tuple<Long, Integer> intensities1 : tuplesList.get(0).getY()){
-						List<Tuple<String, Tuple<Object, Integer>>> list = new ArrayList<Tuple<String, Tuple<Object, Integer>>>();
-						list.add(new Tuple<String, Tuple<Object, Integer>>(tuplesList.get(0).getX().getX(), new Tuple<Object, Integer>(tuplesList.get(0).getX().getY(), intensities1.getY())));
-						result.put(intensities1.getX(), list);
+					if (rawResults == null)
+						System.out.println("We have not been able to build a connected graph containing all your given attribute values.");
+					else{
+						if (rawResults.size() < 2)
+							System.out.println("\nSearch result : "+rawResults);
+						else
+							System.out.println("\nSearch results : "+rawResults);
 					}
-					
-					//Other tuples : add only if already present
-					for(int i = 1; i<joinElements; i++){
-						for (Tuple<Long, Integer> intensities : tuplesList.get(i).getY()){
-							if (result.keySet().contains(intensities.getX())){
-								List<Tuple<String, Tuple<Object, Integer>>> list = result.get(intensities.getX());
-								list.add(new Tuple<String, Tuple<Object, Integer>>(tuplesList.get(i).getX().getX(), new Tuple<Object, Integer>(tuplesList.get(i).getX().getY(), intensities.getY())));
-								result.put(intensities.getX(), list);
-							}
-						}
-					}
-
-					//Clean if not present in all tuples
-					List<Long> idToRemove = new ArrayList<Long>();
-					for (Entry<Long, List<Tuple<String, Tuple<Object, Integer>>>> entry : result.entrySet()){
-						if (entry.getValue().size() < joinElements)
-							idToRemove.add(entry.getKey());
-					}
-					for (Long id : idToRemove)
-						result.remove(id);
-					
-					List<TreeSet<Long>> rawResults = new ArrayList<TreeSet<Long>>();
-					List<List<Long>> expendedIds = new ArrayList<List<Long>>();
-					
-					//Fill expendedIds with values indexed intensities list.
-					for(int i = 0; i<joinElements; i++){
-						List<Long> ids = new ArrayList<Long>();
-						for (Tuple<Long, Integer> tuple : tuplesList.get(i).getY())
-							ids.add(tuple.getX());
-						
-						expendedIds.add(ids);
-					}
-					
-					List<Long> pivots = updatePivots(expendedIds);
-					
-					if (joinElements > 1){
-						while (checkPivotInAllLists(pivots, expendedIds) == null){ //null if no pivots present in all Lists
-							int id = getListIdNoPivots(pivots, expendedIds);//id of a list containing no pivots
-							
-							if (id == -1){
-								id = getListIdLessPivots(pivots, expendedIds);//id of a list containing less pivots than other lists
-							}
-							
-							List<Long> expendedList = expend(expendedIds.get(id));
-							expendedIds.remove(id);
-							expendedIds.add(expendedList);
-							
-							pivots = updatePivots(expendedIds);
-							
-						}
-					}
-					
-					//Only keep pivots present in all neighborhoods
-					List<Long> finalPivots = new ArrayList<Long>();
-					boolean presentInAll;
-					for (Long id : pivots){
-						presentInAll = true;
-						for (List<Long> list : expendedIds){
-							if (!list.contains(id))
-								presentInAll = false;
-						}
-						if (presentInAll)
-							finalPivots.add(id);
-					}
-					System.out.println("Complete pivots : "+finalPivots);
-					System.out.println("ExpendedIds : "+expendedIds);
-
-					TreeSet<Long> fullVertices = new TreeSet<Long>(expendedIds.get(0));
-					if (joinElements > 1){
-						for (int i = 1; i < joinElements; i++){
-							List<Long> list = expendedIds.get(i);
-							for (Long newId : list){
-								if (!fullVertices.contains(newId))
-									fullVertices.add(newId);
-							}
-						}
-					}
-					
-					boolean modified = true;
-					if (joinElements > 1){
-						while (modified){
-							modified = false;
-							List<Long> copy = new ArrayList<Long>(fullVertices);
-							List<Long> removedIds = new ArrayList<Long>();
-							
-							for (Long id : fullVertices){
-								copy.remove(id);
-								
-								if (copy.size()!=0 && checkConnected(copy) && checkValuesPresent(joinElements, tuplesList, copy)){
-									modified = true;
-									removedIds.add(id);
-								}
-								else
-									copy.add(id);
-							}
-							for(Long id : removedIds)
-								fullVertices.remove(id);
-						}
-					}
-					//Avoid duplicates
-					if (!rawResults.contains(fullVertices))
-						rawResults.add(fullVertices);
-				
-					
-					//REMOVE RESULTS BIGGER THAN OTHERS
-					modified = true;
-					
-					while (modified){
-						modified = false;
-						List<TreeSet<Long>> toRemove = new ArrayList<TreeSet<Long>>();
-						if (rawResults.size() != 0){
-							int size = rawResults.get(0).size();
-							for (TreeSet<Long> list : rawResults){
-								if (list.size() > size)
-									toRemove.add(list);
-								else if (list.size() < size){
-									size = list.size();
-									modified = true;
-								}
-							}
-							
-							for (TreeSet<Long> list : toRemove)
-								rawResults.remove(list);
-						}
-					}
-
-					//PRINT FINAL RESULTS
-					if (rawResults.size() < 2)
-						System.out.println("\nSearch result : "+rawResults);
-					else
-						System.out.println("\nSearch results : "+rawResults);
 				}
-				
-				System.out.println("Elapsed time : " + (System.nanoTime() - startTime) + "ns");
 				
 			} else if (command.equals("searchTestLimits")) {
 				graph.registerItemName("Name");
@@ -2315,7 +1991,7 @@ public class BasicConsole {
 			else if (command.equals("actorsOff")){
 				NeighborhoodVector.actorsEnabled = false;
 			}
-			else if (command.equals("runGGTests")){ //generates graphs (x vertices & y edges)
+			else if (command.equals("runTests")){ //generates graphs (x vertices & y edges) + Searches
 				clearCaches();
 				NeighborhoodVector.testing = true;
 				long minId = 1;
@@ -2329,10 +2005,16 @@ public class BasicConsole {
 				command = IOUtils.readLine("Number of edges: ");
 				int numEdges = Integer.parseInt(command);
 				
+				command = IOUtils.readLine("Number of search turns: ");
+				int numTurns = Integer.parseInt(command);
+				
 				long maxId = numVertices;
 				
 				long startTime;
 				long totalTime;
+				
+				long round1Average = 0;
+				long round2Average = 0;
 				
 				//1
 				NeighborhoodVector.indexEnabled = false;
@@ -2345,12 +2027,15 @@ public class BasicConsole {
 					TestTools.genVertices(minId, maxId, numVertices);
 					if (numEdges > 0)
 						TestTools.genEdges(minId, maxId, numEdges, false);
-					System.out.println("Elapsed time for turn "+(i+1)+" : " + (System.nanoTime() - startTime) + "ns");
+					System.out.println("Elapsed time for turn "+(i+1)+" : \t\t" 
+						+ (System.nanoTime() - startTime) + "ns");
 					totalTime += (System.nanoTime() - startTime);
 					clearCaches();
 				}	
-				System.out.println("Total time for round 1 : " + totalTime + "ns");
-				System.out.println("Average time for round 1 : " + (totalTime/10) + "ns");
+				System.out.println("Total time for round 1 : \t\t" + totalTime + "ns");
+				System.out.println("Average time for round 1 : \t\t" + (totalTime/10) + "ns");
+				round1Average = totalTime/10;
+				
 				
 				//2
 				NeighborhoodVector.indexEnabled = true;
@@ -2363,30 +2048,308 @@ public class BasicConsole {
 					TestTools.genVertices(minId, maxId, numVertices);
 					if (numEdges > 0)
 						TestTools.genEdges(minId, maxId, numEdges, false);
-					System.out.println("Elapsed time for turn "+(i+1)+" : " + (System.nanoTime() - startTime) + "ns");
+					System.out.println("Elapsed time for turn "+(i+1)+" : \t\t" 
+						+ (System.nanoTime() - startTime) + "ns");
 					totalTime += (System.nanoTime() - startTime);
 					clearCaches();
 				}	
-				System.out.println("Total time for round 2 : " + totalTime + "ns");
-				System.out.println("Average time for round 2 : " + (totalTime/10) + "ns");
+				System.out.println("Total time for round 2 : \t\t" + totalTime + "ns");
+				System.out.println("Average time for round 2 : \t\t" + (totalTime/10) + "ns");
+				round2Average = totalTime/10;
+				
 				
 				//3
 				NeighborhoodVector.indexEnabled = true;
 				NeighborhoodVector.actorsEnabled = false;
 
 				System.out.println("\n\nRound 3 :");
+				long startSearchTime;
+				long elapsedTime = 0;
+				long totalManualTime = 0;
+				long totalJoinTime = 0;
+				int joinElements;
 				totalTime = 0;
 				for (int i=0; i<10; i++){
 					startTime = System.nanoTime();
 					TestTools.genVertices(minId, maxId, numVertices);
 					if (numEdges > 0)
 						TestTools.genEdges(minId, maxId, numEdges, false);
-					System.out.println("Elapsed time for turn "+(i+1)+" : " + (System.nanoTime() - startTime) + "ns");
+					System.out.println("Elapsed time for turn "+(i+1)+" : \t\t" 
+						+ (System.nanoTime() - startTime) + "ns");
 					totalTime += (System.nanoTime() - startTime);
+					/*
+					 * Compute Searches
+					 */
+					startSearchTime = System.nanoTime();
+					elapsedTime = 0;
+					totalManualTime = 0;
+					totalJoinTime = 0;
+					
+					if (numVertices<1000)
+						joinElements = TestTools.random(140) + 1;
+					else
+						joinElements = TestTools.random(270) + 1;
+					
+					//2 Get x Attribute Values
+					Map<String, Map<Object, List<Tuple<Long, Integer>>>> attributeIndex =
+							ImgGraph.getInstance().getAttributeIndex().getAttributeIndex();
+					Entry<String, Map<Object, List<Tuple<Long, Integer>>>> attributeIndexEntry = 
+							attributeIndex.entrySet().iterator().next();
+					String attribute = attributeIndexEntry.getKey();
+					
+					List<Object> objectList = new ArrayList<Object>();
+					Iterator<Entry<Object, List<Tuple<Long, Integer>>>> iterator = 
+							attributeIndexEntry.getValue().entrySet().iterator();
+					for (int j=0; j<joinElements; j++){
+						objectList.add(iterator.next().getKey());
+					}
+					
+					//3 Perform an index search on x
+					List<Tuple<Tuple<String,Object>, List<Tuple<Long, Integer>>>> tuplesList = 
+							new ArrayList<Tuple<Tuple<String,Object>, List<Tuple<Long, Integer>>>>();
+					startSearchTime = System.nanoTime();
+					for (Entry<Object, List<Tuple<Long, Integer>>> valueIndexed : 
+						ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().get(attribute).entrySet()){
+						if (objectList.contains(valueIndexed.getKey())){
+							tuplesList.add(new Tuple<Tuple<String,Object>, List<Tuple<Long, Integer>>>(
+									new Tuple<String,Object>(attribute, valueIndexed.getKey()), valueIndexed.getValue()));
+						}
+					}
+					elapsedTime = (System.nanoTime() - startSearchTime);
+					totalJoinTime += elapsedTime;
+					System.out.println("Elapsed time for join search ("+joinElements
+							+" arguments) in turn "+(i+1)+" : \t\t" + elapsedTime + "ns");
+					
+					
+					//4 Perform a manual search on x
+					List<Tuple<String,String>> userInput = new ArrayList<Tuple<String,String>>();
+					tuplesList = new ArrayList<Tuple<Tuple<String,Object>, List<Tuple<Long, Integer>>>>();
+					startSearchTime = System.nanoTime();
+					for (Object value : objectList){
+						userInput.add(new Tuple<String, String>(attribute, value.toString()));
+
+						//Initialization of tupleList
+						tuplesList.add(new Tuple<Tuple<String,Object>,List<Tuple<Long, Integer>>>(
+								new Tuple<String, Object>(attribute, value),
+								new ArrayList<Tuple<Long, Integer>>()));
+					}
+					
+					//Check, for each vertex, if it contains the researched attributes
+					for (Entry<String, List<Long>> machineList : TestTools.getCellsID().entrySet()){
+						for (Long id : machineList.getValue()){
+							ImgVertex vertex = graph.getRawGraph().getVertex(id);
+							
+							//Get its map of attribute-value
+							final Map<String, Object> attributeMap = new HashMap<String, Object>(); 
+							if (vertex != null){
+								if (vertex.getAttributes() != null && !vertex.getAttributes().isEmpty()) {
+									final ImgGraph g = ImgGraph.getInstance();
+									vertex.getAttributes().forEachEntry(new TIntObjectProcedure<Object>() {
+										@Override
+										public boolean execute(int keyIndex, Object value) {
+											attributeMap.put(g.getItemName(keyIndex), value);
+											return true;
+										}
+									});
+								}
+							}
+							
+							//Check, for each vertex, if it contains the researched attributes
+							for (Tuple<String,String> researchedValue : userInput){
+								Object value = attributeMap.get(researchedValue.getX());
+								if (value != null && value.toString().equals(researchedValue.getY())){
+									//This vertex contains a researched attribute value
+									//Need to add it to tupleList
+									for (Tuple<Tuple<String,Object>, List<Tuple<Long, Integer>>> tuple : tuplesList){
+										if (tuple.getX().getX().equals(researchedValue.getX())
+												&& tuple.getX().getY().toString().equals(
+														researchedValue.getY().toString())){
+											tuple.getY().add(new Tuple<Long, Integer>(id, 100));
+										}
+									}
+								}
+							}
+						}
+					}
+					elapsedTime = (System.nanoTime() - startSearchTime);
+					totalManualTime += elapsedTime;
+					System.out.println("Elapsed time for manual search ("+joinElements+" arguments) in turn "
+											+(i+1)+" : \t\t" + elapsedTime + "ns");
+					
+					
 					clearCaches();
 				}	
-				System.out.println("Total time for round 3 : " + totalTime + "ns");
-				System.out.println("Average time for round 3 : " + (totalTime/10) + "ns");
+				System.out.println("Total time for round 3 : \t\t" + totalTime + "ns");
+				System.out.println("Average time for round 3 : \t\t" + (totalTime/10) + "ns");
+				
+				/*
+				 * Print search results done in round 3
+				 */
+				System.out.println("\nSearch Results:");
+				System.out.println("Total join search time for round 2 : \t\t" + totalJoinTime + "ns");
+				System.out.println("Average join search time for round 2 : \t\t" + (totalJoinTime/10) + "ns");
+
+				System.out.println("Total manual search time for round 2 : \t\t" + totalManualTime + "ns");
+				System.out.println("Average manual search time for round 2 : \t\t" + (totalManualTime/10) + "ns");
+				
+				
+				/*
+				 * Stats
+				 */
+				System.out.println("\nFinal Results:");
+				System.out.println("Index+actors+join search average time : \t\t" + (round2Average + (totalJoinTime/10)) + "ns");
+				System.out.println("No Index+blocking+manual search average time : \t\t" + (round1Average + (totalManualTime/10)) + "ns");
+				
+				NeighborhoodVector.testing = false;
+			}
+			else if (command.equals("runSTests")){ //generates graphs (x vertices & y edges) then perform a test
+				clearCaches();
+				NeighborhoodVector.testing = true;
+				long minId = 1;
+				
+				command = IOUtils.readLine("Number of machines: ");
+				NeighborhoodVector.numberOfMachines = Integer.parseInt(command);
+				
+				command = IOUtils.readLine("Number of vertices: ");
+				long numVertices = Long.parseLong(command);
+				
+				command = IOUtils.readLine("Number of edges: ");
+				int numEdges = Integer.parseInt(command);
+				
+				command = IOUtils.readLine("Number of turn: ");
+				int numTurns = Integer.parseInt(command);
+				
+				long maxId = numVertices;
+				
+				long startTime;
+				long elapsedTime = 0;
+				long totalManualTime = 0;
+				long totalJoinTime = 0;
+				
+				//2
+				NeighborhoodVector.indexEnabled = true;
+				NeighborhoodVector.actorsEnabled = true;
+				
+				//totalTime = 0;
+				for (int i=0; i<numTurns; i++){
+					int joinElements = TestTools.random(140) + 1;
+					
+					//1 Generate the graph
+					TestTools.genVertices(minId, maxId, numVertices);
+					if (numEdges > 0)
+						TestTools.genEdges(minId, maxId, numEdges, false);
+					
+					//2 Get x Attribute Values
+					Map<String, Map<Object, List<Tuple<Long, Integer>>>> attributeIndex =
+							ImgGraph.getInstance().getAttributeIndex().getAttributeIndex();
+					Entry<String, Map<Object, List<Tuple<Long, Integer>>>> attributeIndexEntry = 
+							attributeIndex.entrySet().iterator().next();
+					String attribute = attributeIndexEntry.getKey();
+					
+					List<Object> objectList = new ArrayList<Object>();
+					Iterator<Entry<Object, List<Tuple<Long, Integer>>>> iterator = 
+							attributeIndexEntry.getValue().entrySet().iterator();
+					for (int j=0; j<joinElements; j++){
+						objectList.add(iterator.next().getKey());
+					}
+					
+					//3 Perform an index search on x
+					List<Tuple<Tuple<String,Object>, List<Tuple<Long, Integer>>>> tuplesList = new ArrayList<Tuple<Tuple<String,Object>, List<Tuple<Long, Integer>>>>();
+					startTime = System.nanoTime();
+					for (Entry<Object, List<Tuple<Long, Integer>>> valueIndexed : ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().get(attribute).entrySet()){
+						if (objectList.contains(valueIndexed.getKey())){
+							tuplesList.add(new Tuple<Tuple<String,Object>, List<Tuple<Long, Integer>>>(new Tuple<String,Object>(attribute, valueIndexed.getKey()), valueIndexed.getValue()));
+						}
+					}
+					elapsedTime = (System.nanoTime() - startTime);
+					totalJoinTime += elapsedTime;
+					/*
+					List<TreeSet<Long>> rawResults = TestTools.joinMultipleSearch(
+						graph, 
+						joinElements, 
+						tuplesList);
+					
+					if (rawResults == null)
+						System.out.println("\nWe have not been able to build a connected graph containing all your given attribute values.");
+					else
+						System.out.println("\nFound "+rawResults.size()+" results of "+rawResults.get(0).size()+" elements.");
+					*/
+					System.out.println("Elapsed time for join search ("+joinElements+" arguments) in turn "+(i+1)+" : " + elapsedTime + "ns");
+					
+					
+					//4 Perform a manual search on x
+					List<Tuple<String,String>> userInput = new ArrayList<Tuple<String,String>>();
+					tuplesList = new ArrayList<Tuple<Tuple<String,Object>, List<Tuple<Long, Integer>>>>();
+					startTime = System.nanoTime();
+					for (Object value : objectList){
+						userInput.add(new Tuple<String, String>(attribute, value.toString()));
+
+						//Initialization of tupleList
+						tuplesList.add(new Tuple<Tuple<String,Object>,List<Tuple<Long, Integer>>>(
+								new Tuple<String, Object>(attribute, value),
+								new ArrayList<Tuple<Long, Integer>>()));
+					}
+					
+					
+					//Check, for each vertex, if it contains the researched attributes
+					for (Entry<String, List<Long>> machineList : TestTools.getCellsID().entrySet()){
+						for (Long id : machineList.getValue()){
+							ImgVertex vertex = graph.getRawGraph().getVertex(id);
+							
+							//Get its map of attribute-value
+							final Map<String, Object> attributeMap = new HashMap<String, Object>(); 
+							if (vertex != null){
+								if (vertex.getAttributes() != null && !vertex.getAttributes().isEmpty()) {
+									final ImgGraph g = ImgGraph.getInstance();
+									vertex.getAttributes().forEachEntry(new TIntObjectProcedure<Object>() {
+										@Override
+										public boolean execute(int keyIndex, Object value) {
+											attributeMap.put(g.getItemName(keyIndex), value);
+											return true;
+										}
+									});
+								}
+							}
+							
+							//Check, for each vertex, if it contains the researched attributes
+							for (Tuple<String,String> researchedValue : userInput){
+								Object value = attributeMap.get(researchedValue.getX());
+								if (value != null && value.toString().equals(researchedValue.getY())){
+									//This vertex contains a researched attribute value
+									//Need to add it to tupleList
+									for (Tuple<Tuple<String,Object>, List<Tuple<Long, Integer>>> tuple : tuplesList){
+										if (tuple.getX().getX().equals(researchedValue.getX())
+												&& tuple.getX().getY().toString().equals(researchedValue.getY().toString())){
+											tuple.getY().add(new Tuple<Long, Integer>(id, 100));
+										}
+									}
+								}
+							}
+						}
+					}
+					elapsedTime = (System.nanoTime() - startTime);
+					totalManualTime += elapsedTime;
+					/*
+					rawResults = TestTools.manualJoinSearch(
+							graph, 
+							joinElements, 
+							userInput,
+							tuplesList);
+					
+					if (rawResults == null)
+						System.out.println("We have not been able to build a connected graph containing all your given attribute values.");
+					else
+						System.out.println("Found "+rawResults.size()+" results of "+rawResults.get(0).size()+" elements.");
+					*/
+					System.out.println("Elapsed time for manual search ("+joinElements+" arguments) in turn "+(i+1)+" : " + elapsedTime + "ns");
+					
+					clearCaches();
+				}	
+				System.out.println("Total join search time for round 2 : " + totalJoinTime + "ns");
+				System.out.println("Average join search time for round 2 : " + (totalJoinTime/10) + "ns");
+
+				System.out.println("Total manual search time for round 2 : " + totalManualTime + "ns");
+				System.out.println("Average manual search time for round 2 : " + (totalManualTime/10) + "ns");
 				
 				NeighborhoodVector.testing = false;
 			}
@@ -2428,7 +2391,7 @@ public class BasicConsole {
 		}
 	}
 
-	private static List<TreeSet<Long>> buildConnectedGraph(
+	public static List<TreeSet<Long>> buildConnectedGraph(
 			ImgraphGraph graph,
 			int joinElements,
 			List<Tuple<Tuple<String, Object>, List<Tuple<Long, Integer>>>> tuplesList,
@@ -2444,7 +2407,6 @@ public class BasicConsole {
 			//First add this vertice
 			ImgVertex vertex = (ImgVertex) graph.getRawGraph().retrieveCell(pivotID);
 			connectedGraph.add(vertex.getId());
-			
 			//Check if we found a value in this vertex
 			found = checkIfNewValueFound(joinElements, tuplesList, valueFound, vertex);
 			
@@ -2456,7 +2418,6 @@ public class BasicConsole {
 			//All researched values are in this vertex
 			if (!found || !allFound){
 				//Need to expand the connectedGraph
-				//TODO not anymore Only add vertices that are in neighborhood of researched values 
 				boolean stop = false;
 				while(!stop){
 					List<Long> newIds = new ArrayList<Long>();
@@ -2464,10 +2425,10 @@ public class BasicConsole {
 						vertex = (ImgVertex) graph.getRawGraph().retrieveCell(id);
 						for (ImgEdge edge : vertex.getEdges()){
 							if (!connectedGraph.contains(edge.getDestCellId())){
-								
 								ImgVertex newVertex = (ImgVertex) graph.getRawGraph().retrieveCell(edge.getDestCellId());
 								
-								if (!onlyInNeighborhood || checkIfValuePresentInNeighborhoodVector(joinElements, tuplesList, newVertex)){
+								if (!onlyInNeighborhood || 
+										checkIfValuePresentInNeighborhoodVector(joinElements, tuplesList, newVertex)){
 									newIds.add(newVertex.getId());
 									
 									//Check if we found a value in this vertex
@@ -2488,7 +2449,6 @@ public class BasicConsole {
 					}
 				}
 			}
-
 			//PRUNNING
 			//Removes vertices that don't take away these graph properties :
 			//	-The graph must be connected : checkConnected
@@ -2505,7 +2465,7 @@ public class BasicConsole {
 					copy.remove(id);
 					
 					if (copy.size()!=0 
-							&& copy.contains(pivotID) 
+							//&& copy.contains(pivotID) 
 							&& checkConnected(copy) 
 							&& checkValuesPresent(joinElements, tuplesList, copy)){
 						modified = true;
@@ -2517,7 +2477,6 @@ public class BasicConsole {
 				for(Long id : removedIds)
 					connectedGraph.remove(id);
 			}
-			
 			//Avoid duplicates
 			if (!rawResults.contains(connectedGraph))
 				rawResults.add(connectedGraph);
@@ -2526,7 +2485,7 @@ public class BasicConsole {
 		return rawResults;
 	}
 
-	private static List<Long> expend(List<Long> list) {
+	public static List<Long> expend(List<Long> list) {
 		List<Long> result = new ArrayList<Long>();
 		for(Long id : list){
 			if (!result.contains(id))
@@ -2545,7 +2504,7 @@ public class BasicConsole {
 
 	
 
-	private static List<Long> updatePivots(List<List<Long>> expendedIds) {
+	public static List<Long> updatePivots(List<List<Long>> expendedIds) {
 		List<Long> pivots = new ArrayList<Long>();
 		
 		for (int i = 0; i < expendedIds.size(); i++){
@@ -2562,11 +2521,13 @@ public class BasicConsole {
 		return pivots;
 	}
 	
-	private static int getListIdLessPivots(List<Long> pivots, List<List<Long>> expendedIds) {
+	public static int getListIdLessPivots(List<Long> pivots, List<List<Long>> expendedIds) {
 		int result = 0;
 		int min = 0;
 		int tmp = 0;
-		//INIT min value
+		
+		//INIT min value -> get the number of pivot in the first element
+		int size = expendedIds.get(0).size();
 		for (Long pivot : pivots){
 			if (expendedIds.get(0).contains(pivot))
 				min++;
@@ -2578,32 +2539,42 @@ public class BasicConsole {
 				if (expendedIds.get(i).contains(pivot))
 					tmp++;
 			}
-			if (tmp < min){
+			if (tmp < min || (tmp == min && expendedIds.get(i).size() < size)){
 				min = tmp;
 				result = i;
+				size = expendedIds.get(i).size();
 			}
 		}
 		
 		return result;
 	}
 
-	private static int getListIdNoPivots(List<Long> pivots, List<List<Long>> expendedIds) {
+	/*
+	 * Should return the smallest one that contain no pivots
+	 */
+	public static int getListIdNoPivots(List<Long> pivots, List<List<Long>> expendedIds) {
 		int result = -1;
 		boolean present;
+		int size = -1;
+		
 		for (int i = 0; i < expendedIds.size(); i++){
+			if (size == -1)
+				size = expendedIds.get(i).size();
 			present = false;
 			for (Long pivot : pivots){
 				if (expendedIds.get(i).contains(pivot))
 					present = true;
 			}
-			if (!present)
+			if (!present && expendedIds.get(i).size() <= size){
 				result = i;
+				size = expendedIds.get(i).size();
+			}
 		}
 		
 		return result;
 	}
 
-	private static Long checkPivotInAllLists(List<Long> pivots, List<List<Long>> expendedIds) {
+	public static Long checkPivotInAllLists(List<Long> pivots, List<List<Long>> expendedIds) {
 		Long result = null;
 		boolean presentInAll = true;
 		
@@ -2620,7 +2591,7 @@ public class BasicConsole {
 		return result;
 	}
 
-	private static boolean checkValuesPresent(int joinElements,
+	public static boolean checkValuesPresent(int joinElements,
 			List<Tuple<	Tuple<String, Object>, 
 						List<Tuple<Long, Integer>>>> tuplesList, 
 			List<Long> connectedGraph) {
@@ -2648,7 +2619,7 @@ public class BasicConsole {
 		return result;
 	}
 
-	private static boolean checkConnected(List<Long> connectedGraph) {
+	public static boolean checkConnected(List<Long> connectedGraph) {
 		List<Long> checked = new ArrayList<Long>();
 		
 		//Add the first vertex

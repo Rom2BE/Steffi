@@ -1,6 +1,7 @@
 package com.imgraph.testing;
 
 import gnu.trove.map.TIntObjectMap;
+import gnu.trove.procedure.TIntObjectProcedure;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -18,14 +19,17 @@ import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
 import java.util.Map.Entry;
+import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.infinispan.Cache;
 import org.zeromq.ZMQ;
 
+import com.imgraph.BasicConsole;
 import com.imgraph.common.BigTextFile;
 import com.imgraph.common.Configuration;
+import com.imgraph.index.Tuple;
 import com.imgraph.model.Cell;
 import com.imgraph.model.EdgeType;
 import com.imgraph.model.ImgEdge;
@@ -231,7 +235,7 @@ public class TestTools {
 			
 			ImgVertex vertex = graph.getRawGraph().addVertex(id, "Vertex "+id);
 			//if ((i%10) == 0)
-				vertex.putAttribute("Size", 80 + random(150));
+				vertex.putAttribute("Size", 20 + random(300));
 			//vertex.putAttribute("Weight", 40 + random(100));
 			/*
 			int size = 120+randomGen.nextInt(100);
@@ -842,5 +846,330 @@ public class TestTools {
 		System.out.println("Traversals per second: " +  ((1000*numberOfTraversals)/testDuration));
 		
 		
+	}
+
+
+	public static List<TreeSet<Long>> manualJoinSearch(
+			ImgraphGraph graph,
+			int joinElements,
+			List<Tuple<String, String>> userInput,
+			List<Tuple<Tuple<String, Object>, List<Tuple<Long, Integer>>>> tuplesList) {
+		
+		//This HashMap called result will contain vertices laying in the neighborhoods of each researched value.
+		Map<Long, List<Tuple<String, Tuple<Object, Integer>>>> result = new HashMap<Long, List<Tuple<String, Tuple<Object, Integer>>>>();
+		
+		//First tuple : add everything
+		for (Tuple<Long, Integer> intensities1 : tuplesList.get(0).getY()){
+			List<Tuple<String, Tuple<Object, Integer>>> list = new ArrayList<Tuple<String, Tuple<Object, Integer>>>();
+			list.add(new Tuple<String, Tuple<Object, Integer>>(tuplesList.get(0).getX().getX(), new Tuple<Object, Integer>(tuplesList.get(0).getX().getY(), intensities1.getY())));
+			result.put(intensities1.getX(), list);
+		}
+		
+		//Other tuples : add only if already present
+		for(int i = 1; i<joinElements; i++){
+			for (Tuple<Long, Integer> intensities : tuplesList.get(i).getY()){
+				if (result.keySet().contains(intensities.getX())){
+					List<Tuple<String, Tuple<Object, Integer>>> list = result.get(intensities.getX());
+					list.add(new Tuple<String, Tuple<Object, Integer>>(tuplesList.get(i).getX().getX(), new Tuple<Object, Integer>(tuplesList.get(i).getX().getY(), intensities.getY())));
+					result.put(intensities.getX(), list);
+				}
+			}
+		}
+		
+		
+	
+		//Clean if not present in all tuples
+		List<Long> idToRemove = new ArrayList<Long>();
+		for (Entry<Long, List<Tuple<String, Tuple<Object, Integer>>>> entry : result.entrySet()){
+			if (entry.getValue().size() < joinElements)
+				idToRemove.add(entry.getKey());
+		}
+		for (Long id : idToRemove)
+			result.remove(id);
+		
+		List<TreeSet<Long>> rawResults = new ArrayList<TreeSet<Long>>();
+		List<List<Long>> expendedIds = new ArrayList<List<Long>>();
+		boolean unreachable = false;
+		
+		//Fill expendedIds with values indexed intensities list.
+		for(int i = 0; i<joinElements; i++){
+			List<Long> ids = new ArrayList<Long>();
+			for (Tuple<Long, Integer> tuple : tuplesList.get(i).getY())
+				ids.add(tuple.getX());
+			
+			expendedIds.add(ids);
+		}
+		
+		List<Long> pivots = BasicConsole.updatePivots(expendedIds);
+		
+		if (joinElements > 1){
+			while (BasicConsole.checkPivotInAllLists(pivots, expendedIds) == null && !unreachable){ //null if no pivots present in all Lists
+				int id = BasicConsole.getListIdNoPivots(pivots, expendedIds);//id of a list containing no pivots
+				
+				if (id == -1){
+					id = BasicConsole.getListIdLessPivots(pivots, expendedIds);//id of a list containing less pivots than other lists
+				}
+				
+				List<Long> expendedList = BasicConsole.expend(expendedIds.get(id));
+				
+				boolean containAll = true;
+				for (Long oldId : expendedList){
+					if (!expendedIds.get(id).contains(oldId))
+						containAll = false;
+				}
+				
+				if (containAll)
+					unreachable = true;
+				
+				expendedIds.remove(id);
+				expendedIds.add(expendedList);
+				
+				pivots = BasicConsole.updatePivots(expendedIds);
+				
+			}
+		}
+		
+		if (!unreachable){
+			
+			//Only keep pivots present in all neighborhoods
+			List<Long> finalPivots = new ArrayList<Long>();
+			boolean presentInAll;
+			for (Long id : pivots){
+				presentInAll = true;
+				for (List<Long> list : expendedIds){
+					if (!list.contains(id))
+						presentInAll = false;
+				}
+				if (presentInAll)
+					finalPivots.add(id);
+			}
+			//System.out.println("Complete pivots : "+finalPivots);
+			//System.out.println("ExpendedIds : "+expendedIds);
+		
+			TreeSet<Long> fullVertices = new TreeSet<Long>(expendedIds.get(0));
+			if (joinElements > 1){
+				for (int i = 1; i < joinElements; i++){
+					List<Long> list = expendedIds.get(i);
+					for (Long newId : list){
+						if (!fullVertices.contains(newId))
+							fullVertices.add(newId);
+					}
+				}
+			}
+			
+			boolean modified = true;
+			if (joinElements > 1){
+				while (modified){
+					modified = false;
+					List<Long> copy = new ArrayList<Long>(fullVertices);
+					List<Long> removedIds = new ArrayList<Long>();
+					
+					for (Long id : fullVertices){
+						copy.remove(id);
+						
+						if (copy.size()!=0 && BasicConsole.checkConnected(copy) && BasicConsole.checkValuesPresent(joinElements, tuplesList, copy)){
+							modified = true;
+							removedIds.add(id);
+						}
+						else
+							copy.add(id);
+					}
+					for(Long id : removedIds)
+						fullVertices.remove(id);
+				}
+			}
+
+			//Avoid duplicates
+			if (!rawResults.contains(fullVertices))
+				rawResults.add(fullVertices);
+		
+	
+			//REMOVE RESULTS BIGGER THAN OTHERS
+			if (rawResults.size() != 0){
+				modified = true;
+				int size = rawResults.get(0).size();
+	
+				while (modified){
+					modified = false;
+					List<TreeSet<Long>> toRemove = new ArrayList<TreeSet<Long>>();
+					for (TreeSet<Long> list : rawResults){
+						if (list.size() > size)
+							toRemove.add(list);
+						else if (list.size() < size){
+							size = list.size();
+							modified = true;
+						}
+					}
+	
+					for (TreeSet<Long> list : toRemove)
+						rawResults.remove(list);
+				}
+			}
+		}
+		else 
+			rawResults = null;
+		//PRINT FINAL RESULTS
+		/*
+		if (rawResults.size() < 2)
+			System.out.println("\nSearch result : "+rawResults);
+		else
+			System.out.println("\nSearch results : "+rawResults);
+		*/
+		
+		return rawResults;
+		//System.out.println("Elapsed time for manual search: " + (System.nanoTime() - startTime) + "ns");
+		
+	}
+
+
+	public static List<TreeSet<Long>> joinMultipleSearch(
+			ImgraphGraph graph,
+			int joinElements,
+			List<Tuple<Tuple<String, Object>, List<Tuple<Long, Integer>>>> tuplesList) {
+	
+		//This HashMap called result will contain vertices laying in the neighborhoods of each researched value.
+		Map<Long, List<Tuple<String, Tuple<Object, Integer>>>> completePivots = new HashMap<Long, List<Tuple<String, Tuple<Object, Integer>>>>();
+		
+		//First tuple : add everything
+		for (Tuple<Long, Integer> intensities1 : tuplesList.get(0).getY()){
+			List<Tuple<String, Tuple<Object, Integer>>> list = new ArrayList<Tuple<String, Tuple<Object, Integer>>>();
+			list.add(new Tuple<String, Tuple<Object, Integer>>(tuplesList.get(0).getX().getX(), new Tuple<Object, Integer>(tuplesList.get(0).getX().getY(), intensities1.getY())));
+			completePivots.put(intensities1.getX(), list);
+		}
+		
+		//Other tuples : add only if already present
+		for(int i = 1; i<joinElements; i++){
+			for (Tuple<Long, Integer> intensities : tuplesList.get(i).getY()){
+				if (completePivots.keySet().contains(intensities.getX())){
+					List<Tuple<String, Tuple<Object, Integer>>> list = completePivots.get(intensities.getX());
+					list.add(new Tuple<String, Tuple<Object, Integer>>(tuplesList.get(i).getX().getX(), new Tuple<Object, Integer>(tuplesList.get(i).getX().getY(), intensities.getY())));
+					completePivots.put(intensities.getX(), list);
+				}
+			}
+		}
+	
+		//Clean if not present in all tuples
+		List<Long> idToRemove = new ArrayList<Long>();
+		for (Entry<Long, List<Tuple<String, Tuple<Object, Integer>>>> entry : completePivots.entrySet()){
+			if (entry.getValue().size() < joinElements)
+				idToRemove.add(entry.getKey());
+		}
+		for (Long id : idToRemove)
+			completePivots.remove(id);
+		
+		List<TreeSet<Long>> rawResults;
+		//TODO as explained in the thesis
+		//result is not empty
+		boolean unreachable = false;
+		
+		if (completePivots.size() != 0){
+			if (joinElements > 1)
+				rawResults = BasicConsole.buildConnectedGraph(graph, joinElements, tuplesList, new ArrayList(completePivots.keySet()), true);
+			else{
+				rawResults = new ArrayList<TreeSet<Long>>();
+				for (Entry<Long, List<Tuple<String, Tuple<Object, Integer>>>> entry : completePivots.entrySet()){
+					//System.out.println(entry.getKey() + " : " + entry.getValue());
+					
+					String researchedAttribute = tuplesList.get(0).getX().getX();
+					Object researchedValue = tuplesList.get(0).getX().getY();
+					
+					ImgVertex vertex = (ImgVertex) graph.getRawGraph().retrieveCell(entry.getKey());
+					Object value = vertex.getAttribute(researchedAttribute);
+					
+					//This vertice contain this attribute
+					if (value != null){
+						//This vertice contains the researched value
+						if (value.equals(researchedValue)){
+							TreeSet<Long> results = new TreeSet<Long>();
+							results.add(entry.getKey());
+							rawResults.add(results);
+						}
+					}
+				}
+			}
+		}
+		//result is empty, the neighborhoods are not overlapping
+		else{
+			
+			List<List<Long>> expendedIds = new ArrayList<List<Long>>();
+			
+			//Fill expendedIds with values indexed intensities list.
+			for(int i = 0; i<joinElements; i++){
+				List<Long> ids = new ArrayList<Long>();
+				for (Tuple<Long, Integer> tuple : tuplesList.get(i).getY())
+					ids.add(tuple.getX());
+				
+				expendedIds.add(ids);
+			}
+			List<Long> pivots = BasicConsole.updatePivots(expendedIds);
+			if (joinElements > 1){
+				while (BasicConsole.checkPivotInAllLists(pivots, expendedIds) == null && !unreachable){ //null if no pivots present in all Lists
+					int id = BasicConsole.getListIdNoPivots(pivots, expendedIds);//id of a list containing no pivots
+					
+					if (id == -1){
+						id = BasicConsole.getListIdLessPivots(pivots, expendedIds);//id of a list containing less pivots than other lists
+					}
+					
+					List<Long> expendedList = BasicConsole.expend(expendedIds.get(id));
+					
+					boolean containAll = true;
+					for (Long oldId : expendedList){
+						if (!expendedIds.get(id).contains(oldId))
+							containAll = false;
+					}
+					
+					if (containAll)
+						unreachable = true;
+					
+					expendedIds.remove(id);
+					expendedIds.add(expendedList);
+					
+					pivots = BasicConsole.updatePivots(expendedIds);
+				}
+			}
+			
+			if (!unreachable){
+				//Only keep pivots present in all neighborhoods
+				List<Long> expandedCompletePivots = new ArrayList<Long>();
+				
+				boolean presentInAll;
+				for (Long id : pivots){
+					presentInAll = true;
+					for (List<Long> list : expendedIds){
+						if (!list.contains(id))
+							presentInAll = false;
+					}
+					if (presentInAll)
+						expandedCompletePivots.add(id);
+				}
+				rawResults = BasicConsole.buildConnectedGraph(graph, joinElements, tuplesList, expandedCompletePivots, false);
+			}
+			else
+				rawResults = null;
+		}
+		if (!unreachable){
+			//REMOVE RESULTS BIGGER THAN OTHERS
+			if (rawResults.size() != 0){
+				boolean modified = true;
+				int size = rawResults.get(0).size();
+				
+				while (modified){
+					modified = false;
+					List<TreeSet<Long>> toRemove = new ArrayList<TreeSet<Long>>();
+					for (TreeSet<Long> list : rawResults){
+						if (list.size() > size)
+							toRemove.add(list);
+						else if (list.size() < size){
+							size = list.size();
+							modified = true;
+						}
+					}
+	
+					for (TreeSet<Long> list : toRemove)
+						rawResults.remove(list);
+				}
+			}
+		}
+		return rawResults;
 	}
 }
