@@ -24,7 +24,7 @@ public class DistributedTraversal extends SimpleTraversal {
 	private Context context;
 	private Socket requester;
 	private int managerIndex;
-	/*
+	
 	public DistributedTraversal() {
 		ImgGraph graph = ImgGraph.getInstance();
 		context = graph.getZMQContext();
@@ -38,7 +38,7 @@ public class DistributedTraversal extends SimpleTraversal {
 		requester.connect("tcp://" + graph.getTraversalManagerIps()[managerIndex]);
 		
 	}
-	*/
+	
 	public void close() {
 		requester.close();
 		
