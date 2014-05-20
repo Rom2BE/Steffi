@@ -69,8 +69,8 @@ public class ImgGraph implements Serializable {
 	private String localAddress;
 	private NodeClients nodeClients;
 	
-	private AtomicInteger traversalManagerTurn;
-	private String[] traversalManagerIps;
+	//private AtomicInteger traversalManagerTurn;
+	//private String[] traversalManagerIps;
 	private final ZMQ.Context context;
 	
 	
@@ -96,8 +96,8 @@ public class ImgGraph implements Serializable {
 		memberIndexes = new HashMap<String, Integer>();
 		localAddress = CacheContainer.getCellCache().
 				getCacheManager().getAddress().toString();
-		traversalManagerTurn = new AtomicInteger(0);
-		traversalManagerIps = Configuration.getProperty(Key.MANAGER_IPS).split(",");
+		//traversalManagerTurn = new AtomicInteger(0);
+		//traversalManagerIps = Configuration.getProperty(Key.MANAGER_IPS).split(",");
 		
 		String ip = "";
 		Map<String, String> ipsMap = StorageTools.getAddressesIps();
@@ -185,7 +185,7 @@ public class ImgGraph implements Serializable {
 		nodeClients = new NodeClients(this);
 	}
 	
-	
+	/*
 	public int getNextTraversalManagerIndex() {
 		int value = traversalManagerTurn.getAndIncrement();	
 		return Math.abs(value%traversalManagerIps.length) ;
@@ -200,7 +200,7 @@ public class ImgGraph implements Serializable {
 	public String getNextManagerIp() {
 		return traversalManagerIps[getNextTraversalManagerIndex()];
 	}
-	
+	*/
 	
 	public String getLocalAddress() {
 		return localAddress;

@@ -66,7 +66,7 @@ public class NodeServer implements Runnable{
 		
 		loadWorkerManager.init(context, poller, numLoaders);
 		
-		searchWorkerManagerV5.init(context);
+		//searchWorkerManagerV5.init(context);
 		
 		
 		
@@ -100,7 +100,7 @@ public class NodeServer implements Runnable{
 						Message configResponse = new Message(MessageType.CONFIG_CLUSTER_REP);
 						try {
 							ImgGraph.getInstance().initializeMemberIndexes();
-							searchWorkerManagerV5.initializeClientThreads();
+							//searchWorkerManagerV5.initializeClientThreads();
 							
 							configResponse.setBody("OK");
 						} catch (Exception x) {

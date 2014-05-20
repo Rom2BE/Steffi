@@ -54,7 +54,7 @@ public class SearchWorkerManager {
 	private ZMQ.Socket[] managerClientSockets;
 	private ZMQ.Context context;
 	
-	
+	/*
 	public void init(Context context) {
 		this.context = context;
 		completedSearches = new ConcurrentHashMap<UUID, Boolean>();
@@ -88,7 +88,7 @@ public class SearchWorkerManager {
 			i++;
 		}
 	}
-	
+	*/
 	
 	public synchronized void sendResponseToManager(SearchRepMsg searchRepMsg, int managerIndex) throws IOException {
 		
