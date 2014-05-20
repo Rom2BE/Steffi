@@ -98,7 +98,6 @@ public class BasicConsole {
 		runConsole(true);
 	}
 	
-	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private static void runConsole(boolean initZMQ) throws Exception{
 		System.setProperty("java.net.preferIPv4Stack" , "true");
 		String command;
@@ -2069,7 +2068,7 @@ public class BasicConsole {
 				long totalJoinTime = 0;
 				int joinElements;
 				totalTime = 0;
-				for (int i=0; i<10; i++){
+				for (int i=0; i<numTurns; i++){
 					startTime = System.nanoTime();
 					TestTools.genVertices(minId, maxId, numVertices);
 					if (numEdges > 0)
@@ -2100,6 +2099,11 @@ public class BasicConsole {
 					List<Object> objectList = new ArrayList<Object>();
 					Iterator<Entry<Object, List<Tuple<Long, Integer>>>> iterator = 
 							attributeIndexEntry.getValue().entrySet().iterator();
+					System.out.println("joinElements : "+joinElements);
+					System.out.println("size : "+attributeIndexEntry.getValue().entrySet().size());
+					int size = attributeIndexEntry.getValue().entrySet().size();
+					if (size < joinElements)
+						joinElements = size;
 					for (int j=0; j<joinElements; j++){
 						objectList.add(iterator.next().getKey());
 					}
@@ -2180,17 +2184,17 @@ public class BasicConsole {
 					clearCaches();
 				}	
 				System.out.println("Total time for round 3 : \t\t" + totalTime + "ns");
-				System.out.println("Average time for round 3 : \t\t" + (totalTime/10) + "ns");
+				System.out.println("Average time for round 3 : \t\t" + (totalTime/numTurns) + "ns");
 				
 				/*
 				 * Print search results done in round 3
 				 */
 				System.out.println("\nSearch Results:");
-				System.out.println("Total join search time for round 2 : \t\t" + totalJoinTime + "ns");
-				System.out.println("Average join search time for round 2 : \t\t" + (totalJoinTime/10) + "ns");
+				System.out.println("Total join search time : \t\t" + totalJoinTime + "ns");
+				System.out.println("Average join search time : \t\t" + (totalJoinTime/numTurns) + "ns");
 
-				System.out.println("Total manual search time for round 2 : \t\t" + totalManualTime + "ns");
-				System.out.println("Average manual search time for round 2 : \t\t" + (totalManualTime/10) + "ns");
+				System.out.println("Total manual search time : \t\t" + totalManualTime + "ns");
+				System.out.println("Average manual search time : \t\t" + (totalManualTime/numTurns) + "ns");
 				
 				
 				/*
