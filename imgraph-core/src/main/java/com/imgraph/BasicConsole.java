@@ -1302,6 +1302,8 @@ public class BasicConsole {
 		            System.out.println(inetAddr.getHostAddress());
 		        }
 			
+			} else if (command.equals("getLocalAddressIndex")) {
+				System.out.println(ImgGraph.getInstance().getLocalAddressIndex());
 			} /*else if (command.equals("configCluster")){
 				ClusterConfigManager configManager = new ClusterConfigManager();
 				try {
@@ -2024,8 +2026,10 @@ public class BasicConsole {
 				for (int i=0; i<10; i++){
 					startTime = System.nanoTime();
 					TestTools.genVertices(minId, maxId, numVertices);
+					System.out.println("Vertices generated in : \t\t" 
+							+ (System.nanoTime() - startTime) + "ns");
 					if (numEdges > 0)
-						TestTools.genEdges(minId, maxId, numEdges, false);
+						TestTools.genEdges(minId, maxId, numEdges, true);
 					System.out.println("Elapsed time for turn "+(i+1)+" : \t\t" 
 						+ (System.nanoTime() - startTime) + "ns");
 					totalTime += (System.nanoTime() - startTime);

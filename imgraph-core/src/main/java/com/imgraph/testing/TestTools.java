@@ -29,6 +29,7 @@ import org.zeromq.ZMQ;
 import com.imgraph.BasicConsole;
 import com.imgraph.common.BigTextFile;
 import com.imgraph.common.Configuration;
+import com.imgraph.index.NeighborhoodVector;
 import com.imgraph.index.Tuple;
 import com.imgraph.model.Cell;
 import com.imgraph.model.EdgeType;
@@ -273,107 +274,121 @@ public class TestTools {
 	
 	public static void genEdges(long minId, long maxId,
 			int numEdges, boolean directed) {
+		
 		ImgraphGraph graph = ImgraphGraph.getInstance();
 		graph.registerItemName("Friend");
-		long idV1 = 0; //Id of the first vertex
-		long idV2 = 0; //Id of the first vertex
-		boolean allFull = true; //Checking if all possible edges have already been created in the given range
-		boolean edgeAlreadyExist = false; //Checking if there is already an edge between V1 and V2
-		boolean fullEdges = false; //Checking if an vertex can create one more edge
-		ImgVertex vertex = null;
 		
-		
-		
-		//Get vertices ID -> stored in cellsId
-		//Check number of vertices found in the range [minId, maxId]
-		int range = 0;
-		Map<String, List<Long>> cellsIdMap = getCellsID();
-		List<Long> cellsId = new ArrayList<Long>();
-		
-		for(Entry<String, List<Long>> entry : cellsIdMap.entrySet()){
-			for (Long id : entry.getValue()){
-				if(id >= minId && id <= maxId){
-					range++;
-					cellsId.add(id);
-				}
+		if (NeighborhoodVector.testing){
+			graph.startTransaction();
+			
+			long i = 2;
+			while (i <= maxId){
+				((ImgVertex) graph.getRawGraph().retrieveCell(i-1)).addEdge(((ImgVertex) graph.getRawGraph().retrieveCell(i)), directed, "Friend");
+				i++;
 			}
+			graph.commit();
 		}
-		//System.out.println(range + " vertices found in the range ["+minId+","+maxId+"]");
-		//long totalTime = 0;
-		
-		
-		//Creating numEdges edges
-		for(int i=0; i<numEdges; i++){
-			//Checking if all possible edges have already been created in the given range
-			//Should only check edges that are connected to nodes in the range : edgesInRange
-			allFull = true;
-			for (Long id : cellsId){
-				int edgesInRange = 0;
-				for (ImgEdge edge : ((ImgVertex) graph.getRawGraph().retrieveCell(id)).getEdges()){
-					long destId = edge.getDestCellId();
-					if (destId >= minId && destId <= maxId){
-						edgesInRange++;
+		else {
+			long idV1 = 0; //Id of the first vertex
+			long idV2 = 0; //Id of the first vertex
+			boolean allFull = true; //Checking if all possible edges have already been created in the given range
+			boolean edgeAlreadyExist = false; //Checking if there is already an edge between V1 and V2
+			boolean fullEdges = false; //Checking if an vertex can create one more edge
+			ImgVertex vertex = null;
+			
+			
+			
+			//Get vertices ID -> stored in cellsId
+			//Check number of vertices found in the range [minId, maxId]
+			int range = 0;
+			Map<String, List<Long>> cellsIdMap = getCellsID();
+			List<Long> cellsId = new ArrayList<Long>();
+			
+			for(Entry<String, List<Long>> entry : cellsIdMap.entrySet()){
+				for (Long id : entry.getValue()){
+					if(id >= minId && id <= maxId){
+						range++;
+						cellsId.add(id);
 					}
 				}
-				if (edgesInRange != range-1)
-					allFull = false;
 			}
-			if (!allFull) {
-				//Get source vertex
-				do{
-					fullEdges = false;
-					idV1 = cellsId.get(new Random().nextInt(cellsId.size()));
-					//Only take into account edges that connect vertices in the given range.
-					int edgeInRangeCounter = 0;
-					for (ImgEdge edge : ((ImgVertex) graph.getRawGraph().retrieveCell(idV1)).getEdges()){
-						if(edge.getDestCellId() >= minId && edge.getDestCellId() <= maxId)
-							edgeInRangeCounter++;
-					}
-					if (edgeInRangeCounter == range-1)
-						fullEdges=true;
-				}while (fullEdges);
-				
-				//Get destination vertex
-				do{		
-					fullEdges = false;
-					edgeAlreadyExist = false;
-					idV2 = cellsId.get(new Random().nextInt(cellsId.size()));
-					vertex = (ImgVertex) graph.getRawGraph().retrieveCell(idV2);
-					//Only take into account edges that connect vertices in the given range.
-					int edgeInRangeCounter = 0;
-					for (ImgEdge edge : vertex.getEdges()){
-						if(edge.getDestCellId() >= minId && edge.getDestCellId() <= maxId)
-							edgeInRangeCounter++;
-					}
-					
-					if (edgeInRangeCounter == range-1)
-						fullEdges=true;
-					if (!fullEdges){
-						for(ImgEdge edge : vertex.getEdges()){
-							if (edge.getDestCellId()==idV1)
-								edgeAlreadyExist = true;
+			//System.out.println(range + " vertices found in the range ["+minId+","+maxId+"]");
+			//long totalTime = 0;
+			
+			
+			//Creating numEdges edges
+			for(int i=0; i<numEdges; i++){
+				//Checking if all possible edges have already been created in the given range
+				//Should only check edges that are connected to nodes in the range : edgesInRange
+				allFull = true;
+				for (Long id : cellsId){
+					int edgesInRange = 0;
+					for (ImgEdge edge : ((ImgVertex) graph.getRawGraph().retrieveCell(id)).getEdges()){
+						long destId = edge.getDestCellId();
+						if (destId >= minId && destId <= maxId){
+							edgesInRange++;
 						}
 					}
-				}while(idV1 == idV2 || fullEdges || edgeAlreadyExist);
-				
-				//Add a new edge between these two edges.
-				
-				//long startTime = System.nanoTime();
-				
-				graph.startTransaction();
-				//v1 & v2 must be included in the transaction
-				((ImgVertex) graph.getRawGraph().retrieveCell(idV1)).addEdge(((ImgVertex) graph.getRawGraph().retrieveCell(idV2)), directed, "Friend");
-				graph.commit();
-				
-				//totalTime += (System.nanoTime() - startTime);
-				//if ((i%1000) == 0)
-				//	System.out.println(i+"/"+numEdges+" created, \telapsed : " + totalTime);
-				//System.out.println(idV1 + " & " + idV2 + " are now Friends.");
+					if (edgesInRange != range-1)
+						allFull = false;
+				}
+				if (!allFull) {
+					//Get source vertex
+					do{
+						fullEdges = false;
+						idV1 = cellsId.get(new Random().nextInt(cellsId.size()));
+						//Only take into account edges that connect vertices in the given range.
+						int edgeInRangeCounter = 0;
+						for (ImgEdge edge : ((ImgVertex) graph.getRawGraph().retrieveCell(idV1)).getEdges()){
+							if(edge.getDestCellId() >= minId && edge.getDestCellId() <= maxId)
+								edgeInRangeCounter++;
+						}
+						if (edgeInRangeCounter == range-1)
+							fullEdges=true;
+					}while (fullEdges);
+					
+					//Get destination vertex
+					do{		
+						fullEdges = false;
+						edgeAlreadyExist = false;
+						idV2 = cellsId.get(new Random().nextInt(cellsId.size()));
+						vertex = (ImgVertex) graph.getRawGraph().retrieveCell(idV2);
+						//Only take into account edges that connect vertices in the given range.
+						int edgeInRangeCounter = 0;
+						for (ImgEdge edge : vertex.getEdges()){
+							if(edge.getDestCellId() >= minId && edge.getDestCellId() <= maxId)
+								edgeInRangeCounter++;
+						}
+						
+						if (edgeInRangeCounter == range-1)
+							fullEdges=true;
+						if (!fullEdges){
+							for(ImgEdge edge : vertex.getEdges()){
+								if (edge.getDestCellId()==idV1)
+									edgeAlreadyExist = true;
+							}
+						}
+					}while(idV1 == idV2 || fullEdges || edgeAlreadyExist);
+					
+					//Add a new edge between these two edges.
+					
+					//long startTime = System.nanoTime();
+					
+					graph.startTransaction();
+					//v1 & v2 must be included in the transaction
+					((ImgVertex) graph.getRawGraph().retrieveCell(idV1)).addEdge(((ImgVertex) graph.getRawGraph().retrieveCell(idV2)), directed, "Friend");
+					graph.commit();
+					
+					//totalTime += (System.nanoTime() - startTime);
+					//if ((i%1000) == 0)
+					//	System.out.println(i+"/"+numEdges+" created, \telapsed : " + totalTime);
+					//System.out.println(idV1 + " & " + idV2 + " are now Friends.");
+				}
 			}
+			if (allFull)
+				System.out.println("All possible edges ("+ (range*(range-1)/2) +") have already been created for the "+range+" vertices in the range ["+minId+","+(maxId)+"].");
+			//System.out.println("Elapsed time : " + totalTime + "ns");
 		}
-		if (allFull)
-			System.out.println("All possible edges ("+ (range*(range-1)/2) +") have already been created for the "+range+" vertices in the range ["+minId+","+(maxId)+"].");
-		//System.out.println("Elapsed time : " + totalTime + "ns");
 	}
 	
 	public static void fullMesh(long minId, long maxId, int numVertices) {
