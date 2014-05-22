@@ -467,6 +467,9 @@ public class CellTransaction {
 					ZMQ.Socket socket = null;
 					ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
 			
+					if (context == null)
+						System.out.println("context was null in CellTransaction.commit");
+					
 					try {
 						for (Entry<String, String> entry : clusterAddresses.entrySet()) {
 							//Only send this message to other machines

@@ -207,47 +207,61 @@ public class TestTools {
 		long i = 1;
 		long id, security = 0;
 		long securityLoop = minId-1;
-		
 		Vertex v = null;
-		Random randomGen = new Random();
 		ImgraphGraph graph = ImgraphGraph.getInstance();
 		graph.registerItemName("Name");
 		graph.registerItemName("Size");
-		graph.registerItemName("Weight");
-		while(i<numVertices+1){
-			do{
-				if(security > maxId){ //prevent infinite loop if wrong input ranges
-					securityLoop++;
-					id = securityLoop;
+		//graph.registerItemName("Weight");
+		
+		if (NeighborhoodVector.testing){
+			while (i <= numVertices){
+				graph.startTransaction();
+				int j = 0;
+				while (j < 3500 && i <= numVertices){
+					ImgVertex vertex = graph.getRawGraph().addVertex(i, "Vertex "+i);
+					vertex.putAttribute("Size", 20 + random(300));
+					i++; j++;
 				}
-				else{
-					if (minId == maxId)
-						id = minId;
-					else
-						id = TestTools.nextLong(randomGen, maxId - minId) + minId;
-					security++;
-				}
-				v = graph.getVertex(id); //check if this id is already used 
-			} while (v != null); 
-			//System.out.println("ID : " + id);
-			security = 0;
-			securityLoop = minId-1;
-			graph.startTransaction();
-			
-			ImgVertex vertex = graph.getRawGraph().addVertex(id, "Vertex "+id);
-			//if ((i%10) == 0)
-				vertex.putAttribute("Size", 20 + random(300));
-			//vertex.putAttribute("Weight", 40 + random(100));
-			/*
-			int size = 120+randomGen.nextInt(100);
-			vertex.putAttribute("Size", size);
-			vertex.putAttribute("Weight", size/2);
-			*/
-			graph.stopTransaction(Conclusion.SUCCESS);
-			i++;
-			//
-			//if ((i%10000) == 0)
-			//	System.out.println(i+"/"+numVertices+" created");
+				graph.stopTransaction(Conclusion.SUCCESS);
+			}
+		}
+		else {
+			Random randomGen = new Random();
+			while(i<numVertices+1){
+				do{
+					if(security > maxId){ //prevent infinite loop if wrong input ranges
+						securityLoop++;
+						id = securityLoop;
+					}
+					else{
+						if (minId == maxId)
+							id = minId;
+						else
+							id = TestTools.nextLong(randomGen, maxId - minId) + minId;
+						security++;
+					}
+					v = graph.getVertex(id); //check if this id is already used 
+				} while (v != null); 
+				//System.out.println("ID : " + id);
+				security = 0;
+				securityLoop = minId-1;
+				graph.startTransaction();
+				
+				ImgVertex vertex = graph.getRawGraph().addVertex(id, "Vertex "+id);
+				//if ((i%10) == 0)
+					vertex.putAttribute("Size", 20 + random(300));
+				//vertex.putAttribute("Weight", 40 + random(100));
+				/*
+				int size = 120+randomGen.nextInt(100);
+				vertex.putAttribute("Size", size);
+				vertex.putAttribute("Weight", size/2);
+				*/
+				graph.stopTransaction(Conclusion.SUCCESS);
+				i++;
+				//
+				//if ((i%10000) == 0)
+				//	System.out.println(i+"/"+numVertices+" created");
+			}
 		}
 	}
 	
@@ -272,6 +286,49 @@ public class TestTools {
 	  return (int) result;
 	}
 	
+	public static void genGraph(long numVertices){
+		long i = 1;
+		boolean newChain = false;
+		ImgraphGraph graph = ImgraphGraph.getInstance();
+		graph.registerItemName("Name");
+		graph.registerItemName("Size");
+		graph.registerItemName("Friend");
+		
+		while (i <= numVertices){
+			graph.startTransaction();
+			while (i%3497!=0 && i <= numVertices){
+				if (newChain){
+					i--;
+					newChain = false;
+				}
+				ImgVertex vertex = graph.getRawGraph().addVertex(i, "Vertex "+i);
+				vertex.putAttribute("Size", i);
+				if (i > 1)
+					((ImgVertex) graph.getRawGraph().retrieveCell(i-1)).addEdge(((ImgVertex) graph.getRawGraph().retrieveCell(i)), false, "Friend");
+				
+				i++;
+			}
+			graph.stopTransaction(Conclusion.SUCCESS);
+			i++;
+			newChain = true;
+		}
+	}
+	
+	public static void genEdges(long edges){
+		ImgraphGraph graph = ImgraphGraph.getInstance();
+		graph.registerItemName("Friend");
+		
+		long i = 2;
+		while (i <= edges){
+			graph.startTransaction();
+			while (i%3500!=0 && i <= edges){
+				((ImgVertex) graph.getRawGraph().retrieveCell(i-1)).addEdge(((ImgVertex) graph.getRawGraph().retrieveCell(i)), false, "Friend");
+				i++;
+			}
+			graph.stopTransaction(Conclusion.SUCCESS);
+		}
+	}
+	
 	public static void genEdges(long minId, long maxId,
 			int numEdges, boolean directed) {
 		
@@ -279,14 +336,16 @@ public class TestTools {
 		graph.registerItemName("Friend");
 		
 		if (NeighborhoodVector.testing){
-			graph.startTransaction();
-			
 			long i = 2;
 			while (i <= maxId){
-				((ImgVertex) graph.getRawGraph().retrieveCell(i-1)).addEdge(((ImgVertex) graph.getRawGraph().retrieveCell(i)), directed, "Friend");
-				i++;
+				graph.startTransaction();
+				int j = 0;
+				while (j < 3500 && i <= maxId){
+					((ImgVertex) graph.getRawGraph().retrieveCell(i-1)).addEdge(((ImgVertex) graph.getRawGraph().retrieveCell(i)), directed, "Friend");
+					i++; j++;
+				}
+				graph.stopTransaction(Conclusion.SUCCESS);
 			}
-			graph.commit();
 		}
 		else {
 			long idV1 = 0; //Id of the first vertex
@@ -443,7 +502,8 @@ public class TestTools {
 		Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
 		ZMQ.Socket socket = null;
 		ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
-		
+		if (context == null)
+			System.out.println("context was null in TestTools.getCellsID");
 		try {
 			for (Entry<String, String> entry : clusterAddresses.entrySet()) {
 				socket = context.socket(ZMQ.REQ);

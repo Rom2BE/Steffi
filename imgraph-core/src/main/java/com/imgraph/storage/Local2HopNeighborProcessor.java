@@ -44,6 +44,8 @@ public class Local2HopNeighborProcessor implements Serializable, Callable<Intege
 	private void init() {
 		//context = ZMQ.context(1);
 		context = ImgGraph.getInstance().getZMQContext();
+		if (context == null)
+			System.out.println("context was null in CellTransaction.init");
 		sockets = new HashMap<Integer, ZMQ.Socket>();
 		cache = CacheContainer.getCellCache();
 		localAddress = cache.getCacheManager().getAddress().toString();

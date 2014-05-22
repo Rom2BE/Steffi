@@ -66,6 +66,8 @@ public abstract class StorageTools {
 	public static Map<String, Integer> countCellsInCluster() throws IOException {
 		Map<String, Integer> results = new HashMap<String, Integer>();
 		ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
+		if (context == null)
+			System.out.println("context was null in CellTransaction.countCellsInCluster");
 		Random random =  new Random();
 		ZMQ.Socket socket = null;
 		String localAddress = CacheContainer.getCellCache().getCacheManager().getAddress().toString();

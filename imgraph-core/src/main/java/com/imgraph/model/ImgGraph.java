@@ -120,8 +120,11 @@ public class ImgGraph implements Serializable {
 	public ZMQ.Context getZMQContext() {
 		return this.context;
 	}
-	
-	
+	/*
+	public void setZMQContext(ZMQ.Context context) {
+		this.context = context;
+	}
+	*/
 	private boolean isLocalCell(long cellId) {
 		return StorageTools.getCellAddress(cellId).equals(localAddress);
 	}

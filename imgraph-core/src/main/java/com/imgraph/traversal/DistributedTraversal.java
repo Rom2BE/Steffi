@@ -28,6 +28,8 @@ public class DistributedTraversal extends SimpleTraversal {
 	public DistributedTraversal() {
 		ImgGraph graph = ImgGraph.getInstance();
 		context = graph.getZMQContext();
+		if (context == null)
+			System.out.println("context was null in DistributedTraversal");
 		// Socket to talk to server
 		requester = context.socket(ZMQ.REQ);
 		

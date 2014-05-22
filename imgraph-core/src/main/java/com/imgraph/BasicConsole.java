@@ -16,6 +16,9 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.logging.FileHandler;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 import org.infinispan.remoting.transport.Address;
 import org.infinispan.remoting.transport.jgroups.JGroupsAddress;
@@ -663,7 +666,8 @@ public class BasicConsole {
 				Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
 				ZMQ.Socket socket = null;
 				ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
-				
+				if (context == null)
+					System.out.println("context was null in BasicConsole.runConsole 1");
 				try {
 					socket = context.socket(ZMQ.REQ);
 					
@@ -762,7 +766,8 @@ public class BasicConsole {
 						Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
 						ZMQ.Socket socket = null;
 						ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
-						
+						if (context == null)
+							System.out.println("context was null in BasicConsole.runConsole 2");
 						try {
 							socket = context.socket(ZMQ.REQ);
 							
@@ -1991,7 +1996,93 @@ public class BasicConsole {
 			}
 			else if (command.equals("actorsOff")){
 				NeighborhoodVector.actorsEnabled = false;
+			} 
+			else if (command.equals("testingOn")){
+				NeighborhoodVector.testing = true;
 			}
+			else if (command.equals("testingOff")){
+				NeighborhoodVector.testing = false;
+			}
+			else if (command.equals("genGraph")){
+				command = IOUtils.readLine("Number of vertices: ");
+				long numVertices = Long.parseLong(command);
+				//GenChain
+				TestTools.genGraph(numVertices);
+				//Add one vertex
+				graph.startTransaction();
+				ImgVertex vertex = graph.getRawGraph().addVertex(numVertices+1, "New Vertex");
+				vertex.putAttribute("Size", numVertices+1);
+				((ImgVertex) graph.getRawGraph().retrieveCell(1)).addEdge(((ImgVertex) graph.getRawGraph().retrieveCell(numVertices+1)), false, "Friend");
+				graph.stopTransaction(Conclusion.SUCCESS);
+				
+			}
+			/*else if (command.equals("runTests")){
+				clearCaches();
+				NeighborhoodVector.testing = true;
+				
+				command = IOUtils.readLine("Number of machines: ");
+				NeighborhoodVector.numberOfMachines = Integer.parseInt(command);
+				
+				command = IOUtils.readLine("Number of vertices: ");
+				long numVertices = Long.parseLong(command);
+				
+				command = IOUtils.readLine("Number of turns for rounds: ");
+				int numRoundTurns = Integer.parseInt(command);
+				
+				command = IOUtils.readLine("Number of turns for searches: ");
+				int numSearchTurns = Integer.parseInt(command);
+				
+				runTests(graph, numVertices, numRoundTurns, numSearchTurns);
+			}*/
+			else if (command.equals("runAutomatedTests")){
+				clearCaches();
+				NeighborhoodVector.testing = true;
+				
+				
+				Logger logger = Logger.getLogger("MyLog"); 
+				FileHandler fh;  
+			    try {  
+			        // This block configure the logger with handler and formatter  
+			        fh = new FileHandler("../data/imgraph/results.log");  
+			        logger.addHandler(fh);
+			        logger.setUseParentHandlers(false);
+			        SimpleFormatter formatter = new SimpleFormatter();  
+			        fh.setFormatter(formatter);  
+
+			    } catch (SecurityException e) {  
+			        e.printStackTrace();  
+			    } catch (IOException e) {  
+			        e.printStackTrace();  
+			    }  
+				
+				
+				
+				command = IOUtils.readLine("Number of machines: ");
+				NeighborhoodVector.numberOfMachines = Integer.parseInt(command);
+				
+				command = IOUtils.readLine("Number of vertices: ");
+				long numVertices = Long.parseLong(command);
+				
+				command = IOUtils.readLine("Increment value: ");
+				long inc = Long.parseLong(command);
+				
+				command = IOUtils.readLine("Limit: ");
+				long limit = Long.parseLong(command);
+				
+				command = IOUtils.readLine("Number of turns for rounds: ");
+				int numRoundTurns = Integer.parseInt(command);
+				
+				command = IOUtils.readLine("Number of turns for searches: ");
+				int numSearchTurns = Integer.parseInt(command);
+				
+				for (int i = 0; i<limit; i++){
+					logger.info("\n\nWill run the following test: numVertices+(i*inc):"+(numVertices+(i*inc))
+							+", numRoundTurns:"+numRoundTurns+", numSearchTurns:"+numSearchTurns);  
+					System.out.println("\n\nWill run the following test: numVertices+(i*inc):"+(numVertices+(i*inc))
+							+", numRoundTurns:"+numRoundTurns+", numSearchTurns:"+numSearchTurns);
+					runTests(graph, numVertices+(i*inc), numRoundTurns, numSearchTurns, logger);
+				}
+			}/*
 			else if (command.equals("runTests")){ //generates graphs (x vertices & y edges) + Searches
 				clearCaches();
 				NeighborhoodVector.testing = true;
@@ -2011,8 +2102,8 @@ public class BasicConsole {
 				
 				long maxId = numVertices;
 				
-				long startTime;
-				long totalTime;
+				long startTime = 0;
+				long totalTime = 0;
 				
 				long round1Average = 0;
 				long round2Average = 0;
@@ -2022,12 +2113,9 @@ public class BasicConsole {
 				NeighborhoodVector.actorsEnabled = false;
 				
 				System.out.println("\n\nRound 1 :");
-				totalTime = 0;
 				for (int i=0; i<10; i++){
 					startTime = System.nanoTime();
 					TestTools.genVertices(minId, maxId, numVertices);
-					System.out.println("Vertices generated in : \t\t" 
-							+ (System.nanoTime() - startTime) + "ns");
 					if (numEdges > 0)
 						TestTools.genEdges(minId, maxId, numEdges, true);
 					System.out.println("Elapsed time for turn "+(i+1)+" : \t\t" 
@@ -2046,18 +2134,21 @@ public class BasicConsole {
 				
 				System.out.println("\n\nRound 2 :");
 				totalTime = 0;
-				for (int i=0; i<10; i++){
-					startTime = System.nanoTime();
+				for (int i=0; i<15; i++){
+					if (i!=0)
+						startTime = System.nanoTime();
 					TestTools.genVertices(minId, maxId, numVertices);
 					if (numEdges > 0)
 						TestTools.genEdges(minId, maxId, numEdges, false);
-					System.out.println("Elapsed time for turn "+(i+1)+" : \t\t" 
-						+ (System.nanoTime() - startTime) + "ns");
-					totalTime += (System.nanoTime() - startTime);
+					if (i!=0){
+						System.out.println("Elapsed time for turn "+(i+1)+" : \t\t" 
+								+ (System.nanoTime() - startTime) + "ns");
+						totalTime += (System.nanoTime() - startTime);
+					}
 					clearCaches();
 				}	
 				System.out.println("Total time for round 2 : \t\t" + totalTime + "ns");
-				System.out.println("Average time for round 2 : \t\t" + (totalTime/10) + "ns");
+				System.out.println("Average time for round 2 : \t\t" + (totalTime/14) + "ns");
 				round2Average = totalTime/10;
 				
 				
@@ -2080,9 +2171,7 @@ public class BasicConsole {
 					System.out.println("Elapsed time for turn "+(i+1)+" : \t\t" 
 						+ (System.nanoTime() - startTime) + "ns");
 					totalTime += (System.nanoTime() - startTime);
-					/*
-					 * Compute Searches
-					 */
+					//Compute Searches
 					startSearchTime = System.nanoTime();
 					elapsedTime = 0;
 					totalManualTime = 0;
@@ -2190,9 +2279,7 @@ public class BasicConsole {
 				System.out.println("Total time for round 3 : \t\t" + totalTime + "ns");
 				System.out.println("Average time for round 3 : \t\t" + (totalTime/numTurns) + "ns");
 				
-				/*
-				 * Print search results done in round 3
-				 */
+				//Print search results done in round 3
 				System.out.println("\nSearch Results:");
 				System.out.println("Total join search time : \t\t" + totalJoinTime + "ns");
 				System.out.println("Average join search time : \t\t" + (totalJoinTime/numTurns) + "ns");
@@ -2201,15 +2288,13 @@ public class BasicConsole {
 				System.out.println("Average manual search time : \t\t" + (totalManualTime/numTurns) + "ns");
 				
 				
-				/*
-				 * Stats
-				 */
+				//Stats
 				System.out.println("\nFinal Results:");
 				System.out.println("Index+actors+join search average time : \t\t" + (round2Average + (totalJoinTime/10)) + "ns");
 				System.out.println("No Index+blocking+manual search average time : \t\t" + (round1Average + (totalManualTime/10)) + "ns");
 				
 				NeighborhoodVector.testing = false;
-			}
+			}*/
 			else if (command.equals("runSTests")){ //generates graphs (x vertices & y edges) then perform a test
 				clearCaches();
 				NeighborhoodVector.testing = true;
@@ -2364,6 +2449,226 @@ public class BasicConsole {
 		}
 	}
 
+	private static void runTests(ImgraphGraph graph, long numVertices,
+			int numRoundTurns, int numSearchTurns, Logger logger) {
+		long startTime = 0;
+		long elapsedTime = 0;
+		long elapsedTimeOneVertex = 0;
+		long totalTime = 0;
+		long totalTimeOneVertex = 0;
+		
+		//Round 1
+		NeighborhoodVector.indexEnabled = false;
+		NeighborhoodVector.actorsEnabled = false;
+		
+		System.out.println("\n\nRound 1 :");
+		for (int i=0; i<numRoundTurns; i++){
+			
+			startTime = System.nanoTime();
+			
+			//Generate the graph
+			TestTools.genGraph(numVertices);
+			elapsedTime = System.nanoTime() - startTime;
+			
+			//Add one vertex
+			graph.startTransaction();
+			ImgVertex vertex = graph.getRawGraph().addVertex(numVertices+1, "New Vertex");
+			vertex.putAttribute("Size", numVertices+1);
+			((ImgVertex) graph.getRawGraph().retrieveCell(1)).addEdge(((ImgVertex) graph.getRawGraph().retrieveCell(numVertices+1)), false, "Friend");
+			graph.stopTransaction(Conclusion.SUCCESS);
+			elapsedTimeOneVertex = System.nanoTime() - startTime - elapsedTime; 
+			
+			//Print intermediate results
+			System.out.println("Turn "+(i+1)+" : \t\t" 
+				+ "genGraph: "+elapsedTime+" ns, one vertex: "+elapsedTimeOneVertex+" ns");
+			totalTime += elapsedTime;
+			totalTimeOneVertex += elapsedTimeOneVertex;
+			clearCaches();
+		}
+		System.out.println("Total time to generate round 1 : \t\t" + totalTime + "ns");
+		System.out.println("Average time to generate round 1 : \t\t" + (totalTime/numRoundTurns) + " ns");
+		System.out.println("Total time to add one vertex in round 1 : \t\t" + totalTimeOneVertex + "ns");
+		System.out.println("Average time to add one vertex in round 1 : \t\t" + (totalTimeOneVertex/numRoundTurns) + " ns");
+		logger.info("Round 1, Average gen:"+(totalTime/numRoundTurns)
+				+", Average one vertex:"+(totalTimeOneVertex/numRoundTurns)); 
+		//Round 2
+		NeighborhoodVector.indexEnabled = true;
+		NeighborhoodVector.actorsEnabled = true;
+		
+		System.out.println("\n\nRound 2 :");
+		totalTime = 0;
+		totalTimeOneVertex = 0;
+		for (int i=0; i<(numRoundTurns+1); i++){
+			if (i!=0)
+				startTime = System.nanoTime();
+			
+			//Generate the graph
+			TestTools.genGraph(numVertices);
+			if (i!=0){
+				elapsedTime = System.nanoTime() - startTime;
+				
+				//Add one vertex
+				graph.startTransaction();
+				ImgVertex vertex = graph.getRawGraph().addVertex(numVertices+1, "New Vertex");
+				vertex.putAttribute("Size", numVertices+1);
+				((ImgVertex) graph.getRawGraph().retrieveCell(1)).addEdge(((ImgVertex) graph.getRawGraph().retrieveCell(numVertices+1)), false, "Friend");
+				graph.stopTransaction(Conclusion.SUCCESS);
+				elapsedTimeOneVertex = System.nanoTime() - startTime - elapsedTime; 
+				
+				//Print intermediate results
+				System.out.println("Turn "+(i)+" : \t\t" 
+					+ "genGraph: "+elapsedTime+" ns, one vertex: "+elapsedTimeOneVertex+" ns");
+				totalTime += elapsedTime;
+				totalTimeOneVertex += elapsedTimeOneVertex;
+			}
+			clearCaches();
+		}	
+		System.out.println("Total time to generate round 2 : \t\t" + totalTime + "ns");
+		System.out.println("Average time to generate round 2 : \t\t" + (totalTime/numRoundTurns) + " ns");
+		System.out.println("Total time to add one vertex in round 2 : \t\t" + totalTimeOneVertex + "ns");
+		System.out.println("Average time to add one vertex in round 2 : \t\t" + (totalTimeOneVertex/numRoundTurns) + " ns");
+		logger.info("Round 2, Average gen:"+(totalTime/numRoundTurns)
+				+", Average one vertex:"+(totalTimeOneVertex/numRoundTurns));
+		
+		//Round 3
+		NeighborhoodVector.indexEnabled = true;
+		NeighborhoodVector.actorsEnabled = false;
+
+		System.out.println("\n\nRound 3 :");
+		totalTime = 0;
+		totalTimeOneVertex = 0;
+		for (int i=0; i<numRoundTurns; i++){
+			
+			startTime = System.nanoTime();
+			
+			//Generate the graph
+			TestTools.genGraph(numVertices);
+			elapsedTime = System.nanoTime() - startTime;
+			
+			//Add one vertex
+			graph.startTransaction();
+			ImgVertex vertex = graph.getRawGraph().addVertex(numVertices+1, "New Vertex");
+			vertex.putAttribute("Size", numVertices+1);
+			((ImgVertex) graph.getRawGraph().retrieveCell(1)).addEdge(((ImgVertex) graph.getRawGraph().retrieveCell(numVertices+1)), false, "Friend");
+			graph.stopTransaction(Conclusion.SUCCESS);
+			elapsedTimeOneVertex = System.nanoTime() - startTime - elapsedTime; 
+			
+			//Print intermediate results
+			System.out.println("Turn "+(i+1)+" : \t\t" 
+				+ "genGraph: "+elapsedTime+" ns, one vertex: "+elapsedTimeOneVertex+" ns");
+			totalTime += elapsedTime;
+			totalTimeOneVertex += elapsedTimeOneVertex;
+			
+			if (i < (numRoundTurns-1))
+				clearCaches();
+		}	
+		System.out.println("Total time to generate round 3 : \t\t" + totalTime + "ns");
+		System.out.println("Average time to generate round 3 : \t\t" + (totalTime/numRoundTurns) + " ns");
+		System.out.println("Total time to add one vertex in round 3 : \t\t" + totalTimeOneVertex + "ns");
+		System.out.println("Average time to add one vertex in round 3 : \t\t" + (totalTimeOneVertex/numRoundTurns) + " ns");
+		logger.info("Round 3, Average gen:"+(totalTime/numRoundTurns)
+				+", Average one vertex:"+(totalTimeOneVertex/numRoundTurns)); 
+		
+		//Searches
+		String attribute = "Size";
+		List<Object> objectList = new ArrayList<Object>();
+		ImgVertex vertex1 = (ImgVertex) graph.getRawGraph().retrieveCell(1);
+		Object v1;
+		if (vertex1 != null){
+			v1 = vertex1.getAttribute(attribute);
+			objectList.add(v1);
+		}
+		ImgVertex vertex2 = (ImgVertex) graph.getRawGraph().retrieveCell(numVertices);
+		Object v2;
+		if (vertex2 != null){
+			v2 = vertex2.getAttribute(attribute);
+			objectList.add(v2);
+		}
+		
+		long totalIndexSearch = 0;
+		long totalManualSearch = 0;
+		
+		for (int i = 0; i < numSearchTurns; i++){
+			//1 Perform an index search
+			List<Tuple<Tuple<String,Object>, List<Tuple<Long, Integer>>>> tuplesList = 
+					new ArrayList<Tuple<Tuple<String,Object>, List<Tuple<Long, Integer>>>>();
+			long startSearchTime = System.nanoTime();
+			for (Entry<Object, List<Tuple<Long, Integer>>> valueIndexed : 
+				ImgGraph.getInstance().getAttributeIndex().getAttributeIndex().get(attribute).entrySet()){
+				if (objectList.contains(valueIndexed.getKey())){
+					tuplesList.add(new Tuple<Tuple<String,Object>, List<Tuple<Long, Integer>>>(
+							new Tuple<String,Object>(attribute, valueIndexed.getKey()), valueIndexed.getValue()));
+				}
+			}
+			elapsedTime = (System.nanoTime() - startSearchTime);
+			totalIndexSearch += elapsedTime;
+			System.out.println("Elapsed time for join search : \t\t" + elapsedTime + "ns");
+
+			//2 Perform a manual search
+			List<Tuple<String,String>> userInput = new ArrayList<Tuple<String,String>>();
+			tuplesList = new ArrayList<Tuple<Tuple<String,Object>, List<Tuple<Long, Integer>>>>();
+			startSearchTime = System.nanoTime();
+			for (Object value : objectList){
+				userInput.add(new Tuple<String, String>(attribute, value.toString()));
+
+				//Initialization of tupleList
+				tuplesList.add(new Tuple<Tuple<String,Object>,List<Tuple<Long, Integer>>>(
+						new Tuple<String, Object>(attribute, value),
+						new ArrayList<Tuple<Long, Integer>>()));
+			}
+
+			//Check, for each vertex, if it contains the researched attributes
+			for (Entry<String, List<Long>> machineList : TestTools.getCellsID().entrySet()){
+				for (Long id : machineList.getValue()){
+					ImgVertex vertex = graph.getRawGraph().getVertex(id);
+
+					//Get its map of attribute-value
+					final Map<String, Object> attributeMap = new HashMap<String, Object>(); 
+					if (vertex != null){
+						if (vertex.getAttributes() != null && !vertex.getAttributes().isEmpty()) {
+							final ImgGraph g = ImgGraph.getInstance();
+							vertex.getAttributes().forEachEntry(new TIntObjectProcedure<Object>() {
+								@Override
+								public boolean execute(int keyIndex, Object value) {
+									attributeMap.put(g.getItemName(keyIndex), value);
+									return true;
+								}
+							});
+						}
+					}
+
+					//Check, for each vertex, if it contains the researched attributes
+					for (Tuple<String,String> researchedValue : userInput){
+						Object value = attributeMap.get(researchedValue.getX());
+						if (value != null && value.toString().equals(researchedValue.getY())){
+							//This vertex contains a researched attribute value
+							//Need to add it to tupleList
+							for (Tuple<Tuple<String,Object>, List<Tuple<Long, Integer>>> tuple : tuplesList){
+								if (tuple.getX().getX().equals(researchedValue.getX())
+										&& tuple.getX().getY().toString().equals(
+												researchedValue.getY().toString())){
+									tuple.getY().add(new Tuple<Long, Integer>(id, 100));
+								}
+							}
+						}
+					}
+				}
+			}
+			elapsedTime = (System.nanoTime() - startSearchTime);
+			totalManualSearch += elapsedTime;
+			System.out.println("Elapsed time for manual search : \t" + elapsedTime + "ns");
+		}
+		System.out.println("Total time Index Search : \t\t" + totalIndexSearch + "ns");
+		System.out.println("Average time Index Search : \t\t" + (totalIndexSearch/numSearchTurns) + " ns");
+		System.out.println("Total time Manual Search : \t\t" + totalManualSearch + "ns");
+		System.out.println("Average time Manual Search : \t\t" + (totalManualSearch/numSearchTurns) + " ns");
+		logger.info("Search, Average index:"+(totalIndexSearch/numSearchTurns)
+				+", Average manual:"+(totalManualSearch/numSearchTurns)); 
+		
+		clearCaches();
+		NeighborhoodVector.testing = false;
+	}
+
 	private static void clearCaches() {
 		CacheContainer.getCellCache().clear();
 		//Clear Attribute Index
@@ -2372,6 +2677,8 @@ public class BasicConsole {
 		Map<String, String> clusterAddresses = StorageTools.getAddressesIps();
 		ZMQ.Socket socket = null;
 		ZMQ.Context context = ImgGraph.getInstance().getZMQContext();
+		if (context == null)
+			System.out.println("context was null in BasicConsole.clearCaches");
 		
 		try {
 			for (Entry<String, String> entry : clusterAddresses.entrySet()) {

@@ -38,6 +38,8 @@ public class ClientMultiThread implements Runnable {
 	public ClientMultiThread(String ipAddress, String address) {
 		
 		context = ImgGraph.getInstance().getZMQContext();
+		if (context == null)
+			System.out.println("context was null in ClientMultiThread");
 		socket = context.socket(ZMQ.DEALER);
 		String identity =  UUID.randomUUID().toString();
 		socket.setIdentity(identity.getBytes());

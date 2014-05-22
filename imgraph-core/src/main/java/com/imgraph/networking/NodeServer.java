@@ -35,6 +35,8 @@ public class NodeServer implements Runnable{
 		searchWorkerManagerV5 = new SearchWorkerManager();
 		searchMsgCounter = 0;
 		context = ImgGraph.getInstance().getZMQContext();
+		if (context == null)
+			System.out.println("context was null in NodeServer");
 	}
 	
 	public long getSearchMsgCounter() {
